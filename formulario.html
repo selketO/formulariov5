@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Formulario con Firma</title>
+    <link rel="stylesheet" href="index.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
+</head>
+<body>
+   <div class="form-container">
+    <form id="miFormulario" enctype="multipart/form-data">
+        <div class="row">
+            <div class="col-50">
+                <label for="applicant" class="field-label">Solicitante (Operador):</label>
+                <input type="text" class="field-input" id="applicant" name="applicant">
+                <label for="area" class="field-label">Área:</label>
+                <select class="field-input" id="area" name="area">
+                    <!-- Opciones de área aquí -->
+                </select>
+            </div>
+            
+            <div class="col-25">
+                <label for="date" class="field-label">Fecha:</label>
+                <input type="text" class="field-input fake-label-input" id="date" name="date" value="15/02/2024" readonly>
+                <label for="folio" class="field-label">Folio:</label>
+                <input type="text" class="field-input fake-label-input" id="folio" name="folio" value="123456" readonly>
+            </div>
+        </div>
+
+      
+        <div class="row">
+            <div class="col-50">
+                <label for="productService" class="field-label">Producto o Servicio:</label>
+                <input type="text" class="field-input" id="productService" name="productService">
+            </div>
+            <div class="col-25">
+                <label for="quantity" class="field-label">Cantidad:</label>
+                <input type="number" class="field-input" id="quantity" name="quantity">
+            </div>
+            <div class="col-50">
+                <label for="expenseAmount" class="field-label">Monto de Gasto (Pesos):</label>
+                <input type="number" class="field-input" id="expenseAmount" name="expenseAmount">
+            </div>
+        </div>
+      
+        <div class="row">
+            <div class="col-50">
+                <label for="provider" class="field-label">Proveedor:</label>
+                <input type="text" class="field-input" id="provider" name="provider">
+            </div>
+            <div class="col-25">
+                <label for="credit" class="field-label">Dias de credito:</label>
+                <input type="number" class="field-input" id="credit" name="credit">
+            </div>
+            <div class="col-25">
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-50">
+                <label for="paymentForm" class="field-label">Forma de Pago:</label>
+                <select class="field-input" id="paymentForm" name="paymentForm">
+                    <option value="transferencia">Transferencia</option>
+                    <option value="efectivo">Efectivo</option>
+                    <option value="cargo_domiciliado">Cargo domiciliado</option>
+                    <option value="tarjeta_credito">Tarjeta de crédito</option>
+                </select>
+                <label for="budgetItem" class="field-label">Rubro Presupuestal:</label>
+                <select class="field-input" id="budgetItem" name="budgetItem">
+                    <!-- Las opciones se llenarán dinámicamente con JS -->
+                </select>
+            </div>
+            <div class="col-25">
+                <label for="description" class="field-label">Descripción / Observaciones de Producto o Servicio:</label>
+                <textarea class="field-input" id="description" name="description"></textarea>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-100">
+                <input type="hidden" class="field-input" id="correo" name="correo" required>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-100 center-content">
+                <div id="signature-label">Firma aquí:</div>
+                <canvas id="firma" width="400" height="200" style="border:1px solid #000;"></canvas>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-100">
+                <div class="button-container">
+                    <button class="button" id="clear-applicant">Limpiar Firma de Autorización</button>
+                    <button type="submit" class="button" id="enviar">Enviar</button>
+                </div>
+            </div>
+        </div>
+        
+    </form>
+   </div>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-firestore.js"></script>
+    <script src="form-logic.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@2.3.2/dist/signature_pad.min.js"></script>
+    <script>    
+        var canvas = document.getElementById('firma');
+        var signaturePad = new SignaturePad(canvas);
+        
+
+        document.getElementById('enviar').addEventListener('click', function() {
+            event.preventDefault();
+            var data = signaturePad.toDataURL(); // Obtener la imagen de la firma en base64
+            var correo = document.getElementById('correo').value;
+                    // Recoger los valores de los demás campos del formulario
+            var applicant = document.getElementById('applicant').value;
+            var area = document.getElementById('area').value;
+            var productService = document.getElementById('productService').value;
+            var quantity = document.getElementById('quantity').value;
+            var expenseAmount = document.getElementById('expenseAmount').value;
+            var provider = document.getElementById('provider').value;
+            var budgetItem = document.getElementById('budgetItem').value;
+            var paymentForm = document.getElementById('paymentForm').value;
+            var description = document.getElementById('description').value;
+            var date = document.getElementById('date').value;
+            var folio = document.getElementById('folio').value;
+            var credit = document.getElementById('credit').value;
+            console.log(date)
+            
+            fetch('http://localhost:3000/enviar-formulario', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ firma: data, date: date, credit: credit, folio: folio, budgetItem: budgetItem, applicant:applicant,correo: correo, description: description, area: area, productService: productService,quantity: quantity,expenseAmount: expenseAmount,provider: provider, paymentForm: paymentForm}),
+            })
+            .then(response => response.text())
+            .then(data => {
+                alert(data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>
