@@ -248,20 +248,24 @@ document.addEventListener('DOMContentLoaded', function() {
       const budgetItems = areaToBudgetItems[selectedArea] || {};
       budgetItemSelect.innerHTML = ''; // Limpiar las opciones existentes
     
-      // Iterar sobre los rubros para el área seleccionada y añadirlos al selector de rubros
       Object.keys(budgetItems).forEach(budgetItem => {
           let email = budgetItems[budgetItem]; // Obtiene el correo electrónico asociado
-          let option = new Option(budgetItem, email); // Asigna el correo electrónico como valor del option
+          let option = new Option(budgetItem, budgetItem); // Asigna el nombre del rubro como valor del option
           budgetItemSelect.add(option);
       });
+    
+      // Actualizar el correo basado en la primera selección o dejarlo para el evento change
+      if (Object.keys(budgetItems).length > 0) {
+        emailField.value = budgetItems[Object.keys(budgetItems)[0]]; // Establece el correo del primer rubro
+      }
     });
     
     // Evento de cambio para el selector de rubros
     budgetItemSelect.addEventListener('change', function() {
-      // Actualiza el campo de correo electrónico con el valor del rubro seleccionado
-      emailField.value = this.value;
+      const selectedBudgetItem = this.value; // El nombre del rubro seleccionado
+      const email = areaToBudgetItems[areaSelect.value][selectedBudgetItem]; // Obtiene el correo usando el área y el rubro seleccionado
+      emailField.value = email; // Actualiza el campo de correo electrónico
     });
-    
     // Población inicial de las áreas
     Object.keys(areaToBudgetItems).forEach(area => {
       let option = new Option(area, area);

@@ -25,75 +25,63 @@ app.post('/enviar-formulario', async (req, res) => {
     const margin = 50;
     const pageWidth = doc.page.width - 2 * margin;
     const lineHeight = 14;
+    const imagePath = './img/LOGO BCL H.png'; // Asegúrate de que la ruta a la imagen sea correcta
+    doc.image(imagePath, margin, 40, { width: 150 }) // Ajusta la posición y el tamaño según sea necesario
 
+    // Mover la posición vertical para el título debajo de la imagen del logo
+    let yPos = 120; // Esto coloca el título justo debajo de la imagen del logo
+    
+
+    
     // Title of the form
-    doc.fontSize(14)
-        .font('Helvetica-Bold')
-        .text('Formato de Requisición', margin, 50, { align: 'center' });
-
-    // Horizontal line after the title
-    doc.moveTo(margin, 70)
-        .lineTo(pageWidth + margin, 70)
-        .stroke();
-
-    // Reset font size for the rest of the document
+    doc.fontSize(16)
+       .font('Helvetica-Bold')
+       .text('Formato de Requisición', margin, yPos - 30, { align: 'center' });
+    
+    // Agregar el número de folio y la fecha a la derecha de la cabecera
     doc.fontSize(10)
-        .font('Helvetica');
+       .font('Helvetica')
+       .text(`# Folio: ${folio}`, pageWidth + margin - 150, yPos - 30, { width: 140, align: 'right' })
+       .text(`Fecha: ${date}`, pageWidth + margin - 150, yPos - 15, { width: 140, align: 'right' });
+    
+    // Mover la posición vertical para el cuerpo del formulario
+    yPos += 50;
+    
 
-    // Helper function to add form fields with equal spacing
-    function addFormField(label, value, x, y, labelWidth, valueWidth) {
-        doc.text(label, x, y)
-            .text(value || '', x + labelWidth, y, { width: valueWidth, align: 'left' });
+    // Función para añadir campos de formulario
+    function addFormField(label, value, y, xOffset = 150) {
+        const fieldHeight = 15; // Altura del campo de texto
+        const fieldPadding = 2; // Espacio adicional para que el texto no toque los bordes del rectángulo
+        const valueWidth = pageWidth - (margin + xOffset);
+        
+        // Dibujar el rectángulo de fondo para el valor
+        doc.rect(margin + xOffset, y + fieldPadding, valueWidth, fieldHeight)
+           .fillOpacity(0.5) // Puedes ajustar la opacidad según necesites
+           .fillAndStroke('grey', 'grey'); // El relleno y el borde del rectángulo
+    
+        // Resetear la opacidad para el texto
+        doc.fillOpacity(1);
+    
+        // Imprime el título
+        doc.font('Helvetica').fontSize(10).fillColor('black');
+        doc.text(label, margin, y, { width: 240, align: 'left' });
+    
+        // Imprime el valor con un poco de padding dentro del rectángulo
+        doc.text(value || '', margin + xOffset + fieldPadding, y + fieldPadding, { width: valueWidth - (2 * fieldPadding), align: 'left' });
+    
+        yPos += fieldHeight + (2 * fieldPadding); // Añadir espacio vertical después de cada campo
     }
-
-    // Vertical position tracker
-    let yPos = 80;
-
-    // Set label and value widths
-    const labelWidth = 100;
-    const valueWidth = 200;
-
-    // Form fields
-    addFormField('Solicitante (Operador):', applicant, margin, yPos, labelWidth, valueWidth);
-    addFormField('Fecha:', date, margin + labelWidth + valueWidth, yPos, labelWidth, valueWidth);
-
-    yPos += 1.5 * lineHeight;
-
-    addFormField('Área:', area, margin, yPos, labelWidth, valueWidth);
-    addFormField('# Folio:', folio, margin + labelWidth + valueWidth, yPos, labelWidth, valueWidth);
-
-    yPos += 1.5 * lineHeight;
-
-    // Continue adding form fields using the addFormField function...
-    addFormField('Prodcto o servicio:', productService, margin, yPos, labelWidth, valueWidth);
-    yPos += 1.5 * lineHeight;
-
-    // Continue adding form fields using the addFormField function...
-    addFormField('Cantidad:', quantity, margin, yPos, labelWidth, valueWidth);
-    yPos += 1.5 * lineHeight;
-
-    // Continue adding form fields using the addFormField function...
-    addFormField('Proveedor:', provider, margin, yPos, labelWidth, valueWidth);
-    yPos += 1.5 * lineHeight;
-
-    // Continue adding form fields using the addFormField function...
-    addFormField('Descripción / Observaciones de Producto o Servicio:', description, margin, yPos, labelWidth + valueWidth, pageWidth - (labelWidth + valueWidth));
-    yPos += 2 * lineHeight;
-    // Continue adding form fields using the addFormField function...
-    addFormField('Monto de gastos (pesos):', expenseAmount, margin, yPos, labelWidth + valueWidth, pageWidth - (labelWidth + valueWidth));
-    yPos += 1.5 * lineHeight;
-
-    // Continue adding form fields using the addFormField function...
-    addFormField('Dias de credito::', credit, margin, yPos, labelWidth, valueWidth);
-    yPos += 1.5 * lineHeight;
-
-    addFormField('Forma de pago:', paymentForm, margin, yPos, labelWidth, valueWidth);
-    yPos += 1.5 * lineHeight;
-
-    // Continue adding form fields using the addFormField function...
-    addFormField('Rubro Presupuestal:', budgetItem, margin, yPos, labelWidth, valueWidth);
-    yPos += 1.5 * lineHeight;
-
+    // Añadir los campos de formulario
+    addFormField('Solicitante (Operador):', applicant, yPos);
+    addFormField('Área:', area, yPos);
+    addFormField('Producto o Servicio:', productService, yPos);
+    addFormField('Cantidad:', quantity.toString(), yPos);
+    addFormField('Proveedor:', provider, yPos);
+    addFormField('Descripción / Observaciones de Producto o Servicio:', description, yPos, 250);
+    addFormField('Monto de Gasto (Pesos / sin iva):', expenseAmount.toString(), yPos, 175);
+    addFormField('Forma de Pago:', paymentForm, yPos);
+    addFormField('Días de crédito:', credit.toString(), yPos);
+    addFormField('Rubro Presupuestal:', budgetItem, yPos);
 
     // Add extra space for the last field before signatures
     yPos += lineHeight * 2;
@@ -102,32 +90,32 @@ app.post('/enviar-formulario', async (req, res) => {
     const signatureWidth = 180;
     const signatureHeight = 30; // Set the signature height
     const spaceAboveSignatureLine = 5; // Set space above the signature line
-    doc.moveTo(margin, yPos)
-        .lineTo(margin + signatureWidth, yPos)
+    doc.moveTo(margin, yPos + 25)
+        .lineTo(margin + signatureWidth, yPos + 25)
         .stroke()
-        .text('Firma de Solicitante', margin, yPos + 2, { width: signatureWidth, align: 'center' });
+        .text('Firma de Solicitante', margin, yPos + 30, { width: signatureWidth, align: 'center' });
 
     // Calculate the position to place the signature so it's above the line
     const signatureYPosition = yPos - signatureHeight - spaceAboveSignatureLine;
     // Signature of the Authorizer, aligned to the right
     const authorizerSignatureX = pageWidth + margin - signatureWidth;
-    doc.moveTo(authorizerSignatureX, yPos)
-        .lineTo(pageWidth + margin, yPos)
+    doc.moveTo(authorizerSignatureX,  yPos + 25)
+        .lineTo(pageWidth + margin, yPos + 25)
         .stroke()
-        .text('Firma de Autorización', authorizerSignatureX, yPos + 2, { width: signatureWidth, align: 'center' });
+        .text('Firma de Autorización', authorizerSignatureX, yPos + 30, { width: signatureWidth, align: 'center' });
 
     // Name and Title for Finance Authorization, centered below signatures
     yPos += lineHeight * 2; // Move down for finance authorization
     const financeSignatureX = margin + (pageWidth / 2 - signatureWidth / 2);
-    doc.moveTo(financeSignatureX, yPos)
-        .lineTo(financeSignatureX + signatureWidth, yPos)
+    doc.moveTo(financeSignatureX,  yPos + 25)
+        .lineTo(financeSignatureX + signatureWidth, yPos + 25)
         .stroke()
-        .text('Christian Loera', financeSignatureX, yPos - lineHeight, { width: signatureWidth, align: 'center' })
-        .text('Autorización de Finanzas', financeSignatureX, yPos + 2, { width: signatureWidth, align: 'center' });
+        .text('Christian Loera', financeSignatureX, yPos +8, { width: signatureWidth, align: 'center' })
+        .text('Autorización de Finanzas', financeSignatureX, yPos + 30, { width: signatureWidth, align: 'center' });
 
     // Place the applicant's signature image if provided
     if (firma) {
-        doc.image(Buffer.from(firma.split(',')[1], 'base64'), margin, signatureYPosition, { width: signatureWidth, height: signatureHeight });
+        doc.image(Buffer.from(firma.split(',')[1], 'base64'), margin, signatureYPosition + 15, { width: signatureWidth, height: 50 });
     }
     doc.pipe(stream);
     // Aquí agregarías el contenido a tu PDF, como se hizo anteriormente
@@ -170,8 +158,8 @@ app.post('/enviar-formulario', async (req, res) => {
                     port: 587,
                     secure: false,
                     auth: {
-                        user: 'tuCorreo@example.com',
-                        pass: 'tuContraseña',
+                        user: 'edelgado@biancorelab.com',
+                        pass: 'Biancore2023',
                     },
                     tls: {
                         rejectUnauthorized: false,
@@ -180,7 +168,7 @@ app.post('/enviar-formulario', async (req, res) => {
 
                 // Envío del correo electrónico con el PDF adjunto
                 transporter.sendMail({
-                    from: '"Formulario con Firma" <tuCorreo@example.com>',
+                    from: '"Formulario con Firma" ',
                     to: correo, // Correo del receptor
                     subject: 'Documento listo para firma',
                     text: 'Por favor, revisa y firma el documento adjunto.',
