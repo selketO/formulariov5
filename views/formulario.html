@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>Formulario con Firma</title>
-    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="/css/index.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
 </head>
 <body>
    <div class="form-container">
-    <img src="img\LOGO BCL H.png" alt="Logo" style="width:300px; margin-top:10px;">
+    <img src="/img/LOGO BCL H.png" alt="Logo" style="width:300px; margin-top:10px;">
 
     <form id="miFormulario" enctype="multipart/form-data">
         <div class="row">
@@ -103,15 +103,15 @@
     
     <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-firestore.js"></script>
-    <script src="form-logic.js"></script>
+    <script src="/js/form-logic.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@2.3.2/dist/signature_pad.min.js"></script>
     <script>    
         var canvas = document.getElementById('firma');
         var signaturePad = new SignaturePad(canvas);
         
 
-        document.getElementById('enviar').addEventListener('click', function() {
-            event.preventDefault();
+        document.getElementById('miFormulario').addEventListener('submit', function(event) {
+
             var data = signaturePad.toDataURL(); // Obtener la imagen de la firma en base64
             var correo = document.getElementById('correo').value;
                     // Recoger los valores de los demás campos del formulario

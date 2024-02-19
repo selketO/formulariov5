@@ -1,6 +1,7 @@
 const express = require('express');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
+const path = require('path');
 const nodemailer = require('nodemailer');
 const app = express();
 const port = 3000;
@@ -12,7 +13,12 @@ const jwtModule = require('./jwtConfig');
 console.log(jwtModule);
 app.use(cors());
 app.use(express.json()); // para parsing application/json
+app.use(express.static('public'));
 
+app.get('/', (req, res) => {
+    // Cuando vayan a la ruta raíz, les servirás el archivo HTML.
+    res.sendFile(path.join(__dirname, 'views', 'formulario.html'));
+});
 
 app.post('/enviar-formulario', async (req, res) => {
     const { firma, correo, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
@@ -26,8 +32,9 @@ app.post('/enviar-formulario', async (req, res) => {
     const margin = 50;
     const pageWidth = doc.page.width - 2 * margin;
     const lineHeight = 14;
-    const imagePath = './img/LOGO BCL H.png'; // Asegúrate de que la ruta a la imagen sea correcta
-    doc.image(imagePath, margin, 40, { width: 150 }) // Ajusta la posición y el tamaño según sea necesario
+    const imagePath = path.join(__dirname, "public", "img", "LOGO BCL H.png");
+
+    doc.image(imagePath, margin, 40, { width: 150 }); // Ajusta la posición y el tamaño según sea necesario
 
     // Mover la posición vertical para el título debajo de la imagen del logo
     let yPos = 120; // Esto coloca el título justo debajo de la imagen del logo
