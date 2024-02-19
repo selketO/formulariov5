@@ -4,6 +4,7 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 const app = express();
 const port = 3000;
+require('dotenv').config();
 const cors = require('cors');
 const { authenticate, getArgs } = require('./jwtConsole'); // Ajusta las rutas según tu estructura de archivos
 const { sendEnvelope } =  require('../formulario/lib/eSignature/examples/signingViaEmail');
@@ -154,12 +155,12 @@ app.post('/enviar-formulario', async (req, res) => {
 
                 // Configuración del transporte de correo electrónico para notificar al remitente/firmante
                 let transporter = nodemailer.createTransport({
-                    host: "smtp.office365.com",
-                    port: 587,
-                    secure: false,
+                    host: process.env.EMAIL_HOST, // Ejemplo: "smtp.office365.com"
+                    port: process.env.EMAIL_PORT, // Ejemplo: 587
+                    secure: false, // Ejemplo: false, para el puerto 587
                     auth: {
-                        user: 'edelgado@biancorelab.com',
-                        pass: 'Biancore2023',
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PASS,
                     },
                     tls: {
                         rejectUnauthorized: false,
