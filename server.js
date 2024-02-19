@@ -131,56 +131,83 @@ app.post('/enviar-formulario', async (req, res) => {
     }
     doc.pipe(stream);
     // Aquí agregarías el contenido a tu PDF, como se hizo anteriormente
-    doc.fontSize(25).text('Documento para Firma DocuSign', 100, 80);
+    doc.fontSize(25).text('', 100, 80);
     doc.end();
 
    // Esperar a que el PDF se haya generado completamente
    stream.on('finish', async () => {
-    try {
-        const accountInfo = await authenticate();
-        const args = getArgs(accountInfo.apiAccountId, accountInfo.accessToken, accountInfo.basePath, correo, "Nombre del firmante", pdfPath);
-        const result = await sendEnvelope(args);
-        
-        console.log(`Sobre enviado a DocuSign. EnvelopeId: ${result.envelopeId}`);
+    // Asegúrate de que el archivo ha sido completamente escrito en el sistema de archivos
+    stream.close(async () => {
+        // Leer el archivo PDF generado y convertirlo a base64
+        fs.readFile(pdfPath, async (err, data) => {
+            if (err) {
+                console.error('Error al leer el archivo PDF:', err);
+                return res.status(500).send('Error al procesar el archivo PDF para enviar a DocuSign.');
+            }
 
-        // Configuración del transporte de correo electrónico
-        let transporter = nodemailer.createTransport({
-            host: "smtp.office365.com",
-            port: 587,
-            secure: false,
-            auth: {
-                user: 'edelgado@biancorelab.com', // Usar variables de entorno o configuración segura.
-                pass: 'Bincore2023',
-            },
-            tls: {
-                rejectUnauthorized: false,
-            },
-        });
+            const documentBase64 = data.toString('base64');
 
-        // Enviar el correo electrónico con el PDF adjunto
-        transporter.sendMail({
-            from: '"Formulario con Firma" <edelgado@biancorelab.com>',
-            to: correo,
-            subject: 'Firma el Formulario',
-            text: 'Por favor, firma este formulario.',
-            attachments: [{
-                filename: pdfPath.split('/').pop(),
-                path: pdfPath,
-                contentType: 'application/pdf'
-            }]
-        }).then(info => {
-            console.log('Correo enviado: %s', info.messageId);
-            fs.unlinkSync(pdfPath); // Opcional: Eliminar el archivo PDF después de enviarlo.
-            res.send('Formulario enviado por correo electrónico.');
-        }).catch(error => {
-            console.error('Error al enviar el correo electrónico:', error);
-            res.status(500).send('Error al enviar el correo electrónico.');
+            try {
+                const accountInfo = await authenticate();
+                // Prepara los argumentos para enviar a DocuSign, incluyendo el documento en base64
+                const args = {
+                    accountId: accountInfo.apiAccountId,
+                    accessToken: accountInfo.accessToken,
+                    basePath: accountInfo.basePath,
+                    documentBase64, // PDF en base64
+                    signerEmail: correo, // Correo del firmante
+                    signerName: "Nombre del Firmante", // Nombre del firmante
+                    ccEmail: "email@example.com", // Correo CC (opcional)
+                    ccName: "Nombre CC", // Nombre CC (opcional)
+                };
+
+                const result = await sendEnvelope(args);
+                console.log(`Sobre enviado a DocuSign. EnvelopeId: ${result.envelopeId}`);
+
+                // Configuración del transporte de correo electrónico para notificar al remitente/firmante
+                let transporter = nodemailer.createTransport({
+                    host: "smtp.office365.com",
+                    port: 587,
+                    secure: false,
+                    auth: {
+                        user: 'tuCorreo@example.com',
+                        pass: 'tuContraseña',
+                    },
+                    tls: {
+                        rejectUnauthorized: false,
+                    },
+                });
+
+                // Envío del correo electrónico con el PDF adjunto
+                transporter.sendMail({
+                    from: '"Formulario con Firma" <tuCorreo@example.com>',
+                    to: correo, // Correo del receptor
+                    subject: 'Documento listo para firma',
+                    text: 'Por favor, revisa y firma el documento adjunto.',
+                    attachments: [{
+                        filename: 'Documento.pdf',
+                        path: pdfPath,
+                        contentType: 'application/pdf'
+                    }]
+                }).then(info => {
+                    console.log(`Correo de notificación enviado: ${info.messageId}`);
+                    res.send('Formulario enviado y notificación por correo electrónico realizada.');
+                }).catch(error => {
+                    console.error('Error al enviar correo de notificación:', error);
+                    res.status(500).send('Error al enviar correo de notificación.');
+                });
+
+                // Opcional: Eliminar el archivo PDF después del envío
+                fs.unlinkSync(pdfPath);
+
+            } catch (error) {
+                console.error('Error al enviar documento a DocuSign:', error);
+                res.status(500).send('Error al enviar documento a DocuSign.');
+            }
         });
-    } catch (error) {
-        console.error('Error al enviar documento a DocuSign:', error);
-        res.status(500).send('Error al procesar la firma electrónica.');
-    }
+    });
 });
+
 });
 
 app.listen(port, () => {

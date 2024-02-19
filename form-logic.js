@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const areaToBudgetItems = {
       'Comercial': {
         "Licencia de Xtract (Ventas)": "edelgado@biancorelab.com",
-        "Asociacion de Nacional de Tiendas y Autoservicios departamentales": "edelgado@biancorelab.com",
-        "Asociación Mexicana de Estándares para el Comercio Electrónico, Asociación Civil": "edelgado@biancorelab.com",
+        "Asociacion de Nacional de Tiendas y Autoservicios departamentales": "carlos@biancorelab.com",
+        "Asociación Mexicana de Estándares para el Comercio Electrónico, Asociación Civil": "carlos@biancorelab.com",
         "Regalos a clientes": "francisco@biancorelab.com",
         "Servicios Comerciales Amazon Mexico": "francisco@biancorelab.com"
       },

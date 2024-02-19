@@ -78,10 +78,10 @@ async function authenticate(){
 }
 
 function getArgs(apiAccountId, accessToken, basePath,pdfPath){
-  signerEmail = prompt("Enter the signer's email address: ");
-  signerName = prompt("Enter the signer's name: ");
-  ccEmail = prompt("Enter the carbon copy's email address: ");
-  ccName = prompt("Enter the carbon copy's name: ");
+  signerEmail = 'edelgado@biancorelab.com';
+  signerName = 'edhson';
+  ccEmail = 'edelgado@biancorelab.com';
+  ccName = 'edhson';
 
   const envelopeArgs = {
     signerEmail: signerEmail,
@@ -89,7 +89,7 @@ function getArgs(apiAccountId, accessToken, basePath,pdfPath){
     ccEmail: ccEmail,
     ccName: ccName,
     status: 'sent',
-    pdfPath: pdfPath,
+    pdfPath,
     doc3File: path.resolve(demoDocsPath, doc3File)
   };
   const args = {
