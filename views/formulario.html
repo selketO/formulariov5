@@ -12,6 +12,20 @@
 
     <form id="miFormulario" enctype="multipart/form-data">
         <div class="row">
+            <!-- Espacio en blanco a la izquierda (si es necesario) -->
+            <div class="col-50"></div>
+        
+            <!-- Fecha y Folio a la derecha -->
+            <div class="col-25">
+                <label for="date" class="field-label">Fecha:</label>
+                <input type="text" class="field-input fake-label-input" id="date" name="date" value="" readonly>
+            </div>
+            <div class="col-25">
+                <label for="folio" class="field-label">Folio:</label>
+                <input type="text" class="field-input fake-label-input" id="folio" name="folio" value="" readonly>
+            </div>
+        </div>
+        <div class="row">
             <div class="col-50">
                 <label for="applicant" class="field-label">Solicitante (Operador):</label>
                 <input type="text" class="field-input" id="applicant" name="applicant">
@@ -21,12 +35,7 @@
                 </select>
             </div>
             
-            <div class="col-25">
-                <label for="date" class="field-label">Fecha:</label>
-                <input type="text" class="field-input fake-label-input" id="date" name="date" value="15/02/2024" readonly>
-                <label for="folio" class="field-label">Folio:</label>
-                <input type="text" class="field-input fake-label-input" id="folio" name="folio" value="123456" readonly>
-            </div>
+
         </div>
 
       
@@ -72,7 +81,7 @@
                     <!-- Las opciones se llenarán dinámicamente con JS -->
                 </select>
             </div>
-            <div class="col-25">
+            <div class="col-50">
                 <label for="description" class="field-label">Descripción / Observaciones de Producto o Servicio:</label>
                 <textarea class="field-input" id="description" name="description"></textarea>
             </div>
@@ -129,7 +138,7 @@
             var credit = document.getElementById('credit').value;
             console.log(date)
             
-            fetch('http://localhost:3000/enviar-formulario', {
+            fetch('/enviar-formulario', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

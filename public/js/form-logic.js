@@ -20,25 +20,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Función para generar un nuevo folio
   const generateFolio = async () => {
-    // Aquí se supone que tienes una colección 'settings' donde guardas el último folio usado.
-    const folioDoc = await db.collection('settings').doc('folio').get();
-    const folioData = folioDoc.data();
-    const newFolio = (folioData.currentFolio || 0) + 1;
-    
-    // Actualizar el folio en la base de datos
-    await db.collection('settings').doc('folio').set({ currentFolio: newFolio });
+    // Verificar si ya existe un folio en localStorage
+    let newFolio = localStorage.getItem('folio');
+    if (!newFolio) {
+      const folioDoc = await db.collection('settings').doc('folio').get();
+      const folioData = folioDoc.data();
+      newFolio = (folioData.currentFolio || 0) + 1;
+      
+      // Actualizar el folio en la base de datos
+      await db.collection('settings').doc('folio').set({ currentFolio: newFolio });
+
+      // Guardar el nuevo folio en localStorage
+      localStorage.setItem('folio', newFolio);
+    }
 
     return newFolio;
   };
 
-  // Asignar el nuevo folio
+  // Asignar el folio al cargar la página, verificando primero si ya se generó uno en esta sesión
   generateFolio().then(newFolio => {
     const folioInput = document.getElementById('folio');
     folioInput.value = newFolio;
   }).catch(error => {
     console.error('Error generando el folio: ', error);
   });
-
   // Lógica para manejar las listas desplegables dependientes
   const areaSelect = document.getElementById('area');
   const budgetItemSelect = document.getElementById('budgetItem');
@@ -284,16 +289,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Puedes guardar esta data URL en Firebase o donde sea necesario
   });
 
-  document.getElementById('clear-applicant').addEventListener('click', () => {
+  document.getElementById('clear-applicant').addEventListener('click', (event) => {
+    event.preventDefault(); // Prevenir el envío del formulario
     signaturePadApplicant.clear();
   });
-
 
 
   // Enviar el formulario completo
   document.getElementById('enviar').addEventListener('click', async () => {
     // Asegúrate de que todas las validaciones del formulario se han pasado antes de ejecutar esto
-
+    event.preventDefault();
     // Recopilar información del formulario
     const miFormulario = {
       applicant: document.getElementById('applicant').value,
@@ -314,6 +319,12 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const docRef = await db.collection('requisitions').add(miFormulario);
       console.log('Requisición guardada con ID: ', docRef.id);
+      localStorage.removeItem('folio');
+          // Programar la recarga de la página para 2 segundos después del envío
+    setTimeout(() => {
+      // Recargar la página
+      window.location.reload();
+    }, 500);
       // Aquí podrías redirigir al usuario o mostrar un mensaje de éxito
     } catch (error) {
       console.error('Error guardando la requisición: ', error);
@@ -326,4 +337,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// Aquí añades la lógica para manejar la firma y el envío de datos.
