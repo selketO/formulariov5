@@ -170,17 +170,14 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
     }
 
     const formData = doc.data();
-    const pdfFilename = `firma-${formData.date}.pdf`; // Asumiendo que 'formData.date' tiene el formato adecuado y único para el nombre del archivo
-    const pdfPath = path.join(__dirname, 'pdfs', pdfFilename);
+    const pdfFilename = formData.pdfFilename; // Asumimos que esto es el nombre del archivo guardado
+    const pdfPath = path.join(__dirname, "pdfs", pdfFilename);
 
-    // Verifica si el archivo PDF existe antes de intentar enviarlo
-    fs.access(pdfPath, fs.constants.F_OK, (err) => {
-        if (err) {
-            console.error('El archivo PDF no existe:', err);
-            return res.status(500).send('El archivo PDF no existe.');
-        }
-
-        // Procede a mover el documento a la colección de autorizados y enviar el correo
+    try {
+        // Usar fs.promises para acceder al archivo
+        await fs.promises.access(pdfPath, fs.constants.F_OK);
+        
+        // El archivo existe, proceder con la operación
         await db.collection('formulariosAutorizados').doc(token).set(formData);
         await docRef.delete();
 
@@ -194,7 +191,7 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
             },
         });
 
-        transporter.sendMail({
+        await transporter.sendMail({
             from: process.env.EMAIL_FROM,
             to: `${formData.correoAplicant}, cobranza@biancorelab.com`,
             subject: 'Tu formulario ha sido autorizado',
@@ -204,14 +201,15 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
                 path: pdfPath,
                 contentType: 'application/pdf'
             }]
-        }).then(info => {
-            console.log('Correo de confirmación enviado: ', info);
-            res.send('Formulario autorizado y correo de confirmación enviado.');
-        }).catch(error => {
-            console.error('Error al enviar correo de confirmación:', error);
-            res.status(500).send('Error al enviar correo de confirmación.');
         });
-    });
+        
+        console.log('Correo de confirmación enviado');
+        res.send('Formulario autorizado y correo de confirmación enviado.');
+    } catch (error) {
+        // Manejar errores, como archivo no encontrado o error al enviar correo
+        console.error('Error al procesar la autorización:', error);
+        res.status(500).send('Error al procesar la solicitud de autorización.');
+    }
 });
 // --------------------------------------------------------------------------------------------------------No autorizar-------------------------------------------------------------------------------------------
 app.get('/no-autorizar-formulario/:token', async (req, res) => {
