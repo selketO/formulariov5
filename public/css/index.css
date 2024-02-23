@@ -111,6 +111,9 @@ canvas {
     align-items: center; /* Alinea los botones verticalmente al centro */
     gap: 10px; /* Espacio entre los botones */
 }
+.firma{
+    display: none;
+}
 /* Mover la etiqueta de firma encima del canvas */
 #signature-label {
     text-align: center; /* Centra el texto */

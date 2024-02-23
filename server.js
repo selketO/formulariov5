@@ -29,9 +29,17 @@ function generateUniqueId() {
 app.post('/enviar-formulario', async (req, res) => {
     const { firma, correo,correoAplicant, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
 
-    // Crear un documento PDF
+    // Directorio y nombre del archivo PDF
+    const pdfDir = path.join(__dirname, "pdfs");
+    const pdfFilename = `firma-${Date.now()}.pdf`;
+    const pdfPath = path.join(pdfDir, pdfFilename);
+
+    // Verifica y crea el directorio si no existe
+    if (!fs.existsSync(pdfDir)) {
+        fs.mkdirSync(pdfDir, { recursive: true });
+    }
+
     const doc = new PDFDocument();
-    const pdfPath = `firma-${Date.now()}.pdf`;
     const stream = fs.createWriteStream(pdfPath);
 
     // Define constants for layout
@@ -109,7 +117,7 @@ app.post('/enviar-formulario', async (req, res) => {
    stream.on('finish', async () => {
 
 
-    const formData = { ...req.body, pdfPath };
+    const formData = { ...req.body, pdfFilename  };
       const uniqueToken = uuidv4();
   
       // Guarda los datos del formulario con el token en Firestore
@@ -162,14 +170,18 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
     }
 
     const formData = doc.data();
+    // Asumimos que guardaste el nombre del archivo en lugar de la ruta completa en Firestore
+    const pdfFilename = formData.pdfFilename; // Nombre del archivo PDF almacenado en Firestore
+    const pdfPath = path.join(__dirname, "pdfs", pdfFilename); // Construye la ruta al archivo PDF
 
-    // No es necesario convertir a ruta absoluta si ya guardaste una ruta absoluta
-    const pdfPath = formData.pdfPath; // Asegúrate de que este campo exista
     console.log('PDF path:', pdfPath);
 
     if (!fs.existsSync(pdfPath)) {
+        console.error('El archivo PDF no existe:', pdfPath);
         return res.status(500).send('El archivo PDF no existe.');
     }
+
+    // Aquí se realiza el proceso de autorización...
     await db.collection('formulariosAutorizados').doc(token).set(formData);
     await docRef.delete();
 
@@ -182,23 +194,33 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
             pass: process.env.EMAIL_PASS,
         },
     });
-    console.log('Correo destinatario:', formData.correoAplicant);
 
     transporter.sendMail({
         from: process.env.EMAIL_FROM,
-        to: `${formData.correoaplican}, cobranza@biancorelab.com`, // Define el destinatario directamente para pruebas
+        to: `${formData.correoAplicant}, cobranza@biancorelab.com`,
         subject: 'Tu formulario ha sido autorizado',
         text: 'Nos complace informarte que tu formulario ha sido autorizado.',
-        attachments: [
-            {
-                filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
-                path: pdfPath, // Ruta al archivo PDF
-                contentType: 'application/pdf'
-            }
-        ]
+        attachments: [{
+            filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
+            path: pdfPath, // Ruta al archivo PDF
+            contentType: 'application/pdf'
+        }]
     }).then(info => {
         console.log('Correo de confirmación enviado: ', info);
-        res.status(200).send('Formulario autorizado y correo de confirmación enviado.');
+        res.send(`
+            <html>
+                <body>
+                    <p>La acción ha sido procesada. Esta ventana se cerrará automáticamente.</p>
+                    <script>
+                        window.onload = function() {
+                            setTimeout(function() {
+                                window.close();
+                            }, 1500); // Espera 1.5 segundos antes de intentar cerrar
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
     }).catch(error => {
         console.error('Error al enviar correo de confirmación:', error);
         res.status(500).send('Error al enviar correo de confirmación.');
@@ -238,7 +260,20 @@ app.get('/no-autorizar-formulario/:token', async (req, res) => {
         // Aquí decides si enviar o no el PDF como en el correo de autorización
     }).then(info => {
         console.log('Correo de no autorización enviado:', info);
-        res.status(200).send('Formulario no autorizado y correo de notificación enviado.');
+        res.send(`
+        <html>
+            <body>
+                <p>La acción ha sido procesada. Esta ventana se cerrará automáticamente.</p>
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.close();
+                        }, 1500); // Espera 3 segundos antes de intentar cerrar
+                    };
+                </script>
+            </body>
+        </html>
+    `);
     }).catch(error => {
         console.error('Error al enviar correo de no autorización:', error);
         res.status(500).send('Error al enviar correo de no autorización.');
