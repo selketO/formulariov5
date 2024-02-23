@@ -170,60 +170,47 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
     }
 
     const formData = doc.data();
-    // Asumimos que guardaste el nombre del archivo en lugar de la ruta completa en Firestore
-    const pdfFilename = formData.pdfFilename; // Nombre del archivo PDF almacenado en Firestore
-    const pdfPath = path.join(__dirname, "pdfs", pdfFilename); // Construye la ruta al archivo PDF
+    const pdfFilename = `firma-${formData.date}.pdf`; // Asumiendo que 'formData.date' tiene el formato adecuado y único para el nombre del archivo
+    const pdfPath = path.join(__dirname, 'pdfs', pdfFilename);
 
-    console.log('PDF path:', pdfPath);
+    // Verifica si el archivo PDF existe antes de intentar enviarlo
+    fs.access(pdfPath, fs.constants.F_OK, (err) => {
+        if (err) {
+            console.error('El archivo PDF no existe:', err);
+            return res.status(500).send('El archivo PDF no existe.');
+        }
 
-    if (!fs.existsSync(pdfPath)) {
-        console.error('El archivo PDF no existe:', pdfPath);
-        return res.status(500).send('El archivo PDF no existe.');
-    }
+        // Procede a mover el documento a la colección de autorizados y enviar el correo
+        await db.collection('formulariosAutorizados').doc(token).set(formData);
+        await docRef.delete();
 
-    // Aquí se realiza el proceso de autorización...
-    await db.collection('formulariosAutorizados').doc(token).set(formData);
-    await docRef.delete();
+        let transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT, 10),
+            secure: process.env.EMAIL_SECURE === 'true',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
 
-    let transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: parseInt(process.env.EMAIL_PORT, 10),
-        secure: process.env.EMAIL_SECURE === 'true',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    });
-
-    transporter.sendMail({
-        from: process.env.EMAIL_FROM,
-        to: `${formData.correoAplicant}, cobranza@biancorelab.com`,
-        subject: 'Tu formulario ha sido autorizado',
-        text: 'Nos complace informarte que tu formulario ha sido autorizado.',
-        attachments: [{
-            filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
-            path: pdfPath, // Ruta al archivo PDF
-            contentType: 'application/pdf'
-        }]
-    }).then(info => {
-        console.log('Correo de confirmación enviado: ', info);
-        res.send(`
-            <html>
-                <body>
-                    <p>La acción ha sido procesada. Esta ventana se cerrará automáticamente.</p>
-                    <script>
-                        window.onload = function() {
-                            setTimeout(function() {
-                                window.close();
-                            }, 1500); // Espera 1.5 segundos antes de intentar cerrar
-                        };
-                    </script>
-                </body>
-            </html>
-        `);
-    }).catch(error => {
-        console.error('Error al enviar correo de confirmación:', error);
-        res.status(500).send('Error al enviar correo de confirmación.');
+        transporter.sendMail({
+            from: process.env.EMAIL_FROM,
+            to: `${formData.correoAplicant}, cobranza@biancorelab.com`,
+            subject: 'Tu formulario ha sido autorizado',
+            text: 'Nos complace informarte que tu formulario ha sido autorizado.',
+            attachments: [{
+                filename: 'Formulario-Autorizado.pdf',
+                path: pdfPath,
+                contentType: 'application/pdf'
+            }]
+        }).then(info => {
+            console.log('Correo de confirmación enviado: ', info);
+            res.send('Formulario autorizado y correo de confirmación enviado.');
+        }).catch(error => {
+            console.error('Error al enviar correo de confirmación:', error);
+            res.status(500).send('Error al enviar correo de confirmación.');
+        });
     });
 });
 // --------------------------------------------------------------------------------------------------------No autorizar-------------------------------------------------------------------------------------------
