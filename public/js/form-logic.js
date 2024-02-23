@@ -20,35 +20,46 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Función para generar un nuevo folio
   const generateFolio = async () => {
-    // Verificar si ya existe un folio en localStorage
-    let newFolio = localStorage.getItem('folio');
-    if (!newFolio) {
-      const folioDoc = await db.collection('settings').doc('folio').get();
-      const folioData = folioDoc.data();
-      newFolio = (folioData.currentFolio || 0) + 1;
-      
-      // Actualizar el folio en la base de datos
-      await db.collection('settings').doc('folio').set({ currentFolio: newFolio });
-
-      // Guardar el nuevo folio en localStorage
-      localStorage.setItem('folio', newFolio);
-    }
+    // Aquí se supone que tienes una colección 'settings' donde guardas el último folio usado.
+    const folioDoc = await db.collection('settings').doc('folio').get();
+    const folioData = folioDoc.data();
+    const newFolio = (folioData.currentFolio || 0) + 1;
+    
+    // Actualizar el folio en la base de datos
+    await db.collection('settings').doc('folio').set({ currentFolio: newFolio });
 
     return newFolio;
   };
 
-  // Asignar el folio al cargar la página, verificando primero si ya se generó uno en esta sesión
+  // Asignar el nuevo folio
   generateFolio().then(newFolio => {
     const folioInput = document.getElementById('folio');
     folioInput.value = newFolio;
   }).catch(error => {
     console.error('Error generando el folio: ', error);
   });
+
   // Lógica para manejar las listas desplegables dependientes
   const areaSelect = document.getElementById('area');
   const budgetItemSelect = document.getElementById('budgetItem');
   const emailField = document.getElementById('correo'); 
+  const applicantSelect = document.getElementById('applicant'); // Obtener el select de solicitantes
+  const emailApplicant = document.getElementById('correoAplicant'); 
 
+
+  const selectedApplicants = [
+    { name: 'Fernando Vargas', email: 'fvargas@biancorelab.com' },
+    { name: 'Edhson Delgado', email: 'edelgado@biancorelab.com' },
+    { name: 'Irene González', email: 'igonzalez@biancorelab.com' },
+    { name: 'Valeria González', email: 'cobranza@biancorelab.com' },
+    { name: 'Christian Loera', email: 'cloera@biancorelab.com' },
+    { name: 'Julio López', email: 'jlopez@biancorelab.com' },
+    { name: 'Alondra González', email: 'agonzalez@biancorelab.com' },
+    { name: 'Carlos Ancona', email: 'carlos@biancorelab.com' },
+    { name: 'Eliud Cortes', email: 'ecortes@biancorelab.com' },
+    { name: 'Isabel Hérnandez', email: 'no disponible' },
+    { name: 'Luis Ceballos', email: 'luis@biancorelab.com' }
+];
   const areaToBudgetItems = {
       'Comercial': {
         "Licencia de Xtract (Ventas)": "edelgado@biancorelab.com",
@@ -246,8 +257,15 @@ document.addEventListener('DOMContentLoaded', function() {
           "Hospedaje 2": "francisco@biancorelab.com",
         }
     };
-
-
+    selectedApplicants.forEach(applicant => {
+      let option = new Option(applicant.name, applicant.email); // Usa el email como valor
+      applicantSelect.add(option);
+    });
+    
+    applicantSelect.addEventListener('change', function() {
+      emailApplicant.value = this.value; // Actualiza el campo de correo con el valor seleccionado (email)
+    });
+    
     areaSelect.addEventListener('change', function() {
       const selectedArea = this.value;
       const budgetItems = areaToBudgetItems[selectedArea] || {};
@@ -289,16 +307,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Puedes guardar esta data URL en Firebase o donde sea necesario
   });
 
-  document.getElementById('clear-applicant').addEventListener('click', (event) => {
-    event.preventDefault(); // Prevenir el envío del formulario
+  document.getElementById('clear-applicant').addEventListener('click', () => {
+        event.preventDefault(); // Prevenir el envío del formulario
     signaturePadApplicant.clear();
   });
+
 
 
   // Enviar el formulario completo
   document.getElementById('enviar').addEventListener('click', async () => {
     // Asegúrate de que todas las validaciones del formulario se han pasado antes de ejecutar esto
-    event.preventDefault();
+
     // Recopilar información del formulario
     const miFormulario = {
       applicant: document.getElementById('applicant').value,
@@ -308,9 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
       description: document.getElementById('description').value,
       expenseAmount: document.getElementById('expenseAmount').value,
       paymentForm: document.getElementById('paymentForm').value,
+      correoAplicant: document.getElementById('correoAplicant').value,
       area: areaSelect.value,
       budgetItem: budgetItemSelect.value,
       date: dateInput.value,
+      correoAplicant: emailApplicant.value,
       folio: document.getElementById('folio').value,
       signatureApplicant: signaturePadApplicant.toDataURL(),
     };
@@ -319,12 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
       const docRef = await db.collection('requisitions').add(miFormulario);
       console.log('Requisición guardada con ID: ', docRef.id);
-      localStorage.removeItem('folio');
-          // Programar la recarga de la página para 2 segundos después del envío
-    setTimeout(() => {
-      // Recargar la página
-      window.location.reload();
-    }, 500);
       // Aquí podrías redirigir al usuario o mostrar un mensaje de éxito
     } catch (error) {
       console.error('Error guardando la requisición: ', error);
@@ -335,5 +350,4 @@ document.addEventListener('DOMContentLoaded', function() {
   // Iniciar la selección de área para cargar los rubros presupuestales
   areaSelect.dispatchEvent(new Event('change'));
 });
-
 

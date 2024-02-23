@@ -6,22 +6,28 @@ const nodemailer = require('nodemailer');
 const app = express();
 const port = 3000;
 require('dotenv').config();
+const admin = require('firebase-admin');
 const cors = require('cors');
-const { authenticate, getArgs } = require('./jwtConsole'); // Ajusta las rutas según tu estructura de archivos
-const { sendEnvelope } =  require('../formulario/lib/eSignature/examples/signingViaEmail');
-const jwtModule = require('./jwtConfig');
-console.log(jwtModule);
 app.use(cors());
 app.use(express.json()); // para parsing application/json
 app.use(express.static('public'));
+const serviceAccount = require('./formulario-if---ft-firebase-adminsdk-u9bim-fd525dbea7.json');
+const { v4: uuidv4 } = require('uuid');
 
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  const db = admin.firestore();
 app.get('/', (req, res) => {
     // Cuando vayan a la ruta raíz, les servirás el archivo HTML.
-    res.sendFile(path.join(__dirname, 'views', 'formulario.html'));
+    res.sendFile(path.join(__dirname, 'public', 'formulario.html'));
 });
-
+// Función para generar un ID único para la solicitud de autorización
+function generateUniqueId() {
+    return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 app.post('/enviar-formulario', async (req, res) => {
-    const { firma, correo, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
+    const { firma, correo,correoAplicant, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
 
     // Crear un documento PDF
     const doc = new PDFDocument();
@@ -94,37 +100,6 @@ app.post('/enviar-formulario', async (req, res) => {
     // Add extra space for the last field before signatures
     yPos += lineHeight * 2;
 
-    // Signature of the Applicant
-    const signatureWidth = 180;
-    const signatureHeight = 30; // Set the signature height
-    const spaceAboveSignatureLine = 5; // Set space above the signature line
-    doc.moveTo(margin, yPos + 25)
-        .lineTo(margin + signatureWidth, yPos + 25)
-        .stroke()
-        .text('Firma de Solicitante', margin, yPos + 30, { width: signatureWidth, align: 'center' });
-
-    // Calculate the position to place the signature so it's above the line
-    const signatureYPosition = yPos - signatureHeight - spaceAboveSignatureLine;
-    // Signature of the Authorizer, aligned to the right
-    const authorizerSignatureX = pageWidth + margin - signatureWidth;
-    doc.moveTo(authorizerSignatureX,  yPos + 25)
-        .lineTo(pageWidth + margin, yPos + 25)
-        .stroke()
-        .text('Firma de Autorización', authorizerSignatureX, yPos + 30, { width: signatureWidth, align: 'center' });
-
-    // Name and Title for Finance Authorization, centered below signatures
-    yPos += lineHeight * 2; // Move down for finance authorization
-    const financeSignatureX = margin + (pageWidth / 2 - signatureWidth / 2);
-    doc.moveTo(financeSignatureX,  yPos + 25)
-        .lineTo(financeSignatureX + signatureWidth, yPos + 25)
-        .stroke()
-        .text('Christian Loera', financeSignatureX, yPos +8, { width: signatureWidth, align: 'center' })
-        .text('Autorización de Finanzas', financeSignatureX, yPos + 30, { width: signatureWidth, align: 'center' });
-
-    // Place the applicant's signature image if provided
-    if (firma) {
-        doc.image(Buffer.from(firma.split(',')[1], 'base64'), margin, signatureYPosition + 15, { width: signatureWidth, height: 50 });
-    }
     doc.pipe(stream);
     // Aquí agregarías el contenido a tu PDF, como se hizo anteriormente
     doc.fontSize(25).text('', 100, 80);
@@ -132,79 +107,144 @@ app.post('/enviar-formulario', async (req, res) => {
 
    // Esperar a que el PDF se haya generado completamente
    stream.on('finish', async () => {
-    // Asegúrate de que el archivo ha sido completamente escrito en el sistema de archivos
-    stream.close(async () => {
-        // Leer el archivo PDF generado y convertirlo a base64
-        fs.readFile(pdfPath, async (err, data) => {
-            if (err) {
-                console.error('Error al leer el archivo PDF:', err);
-                return res.status(500).send('Error al procesar el archivo PDF para enviar a DocuSign.');
+
+
+    const formData = { ...req.body, pdfPath };
+      const uniqueToken = uuidv4();
+  
+      // Guarda los datos del formulario con el token en Firestore
+      await db.collection('solicitudesPendientes').doc(uniqueToken).set(formData);
+  
+      const authorizationLink = `http://localhost:${port}/autorizar-formulario/${uniqueToken}`;
+      const noAuthorizationLink = `http://localhost:${port}/no-autorizar-formulario/${uniqueToken}`;
+
+  
+      let transporter = nodemailer.createTransport({
+          host: process.env.EMAIL_HOST,
+          port: parseInt(process.env.EMAIL_PORT, 10),
+          secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
+          auth: {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASS,
+          },
+      });
+  
+      transporter.sendMail({
+          from: process.env.EMAIL_FROM, // Agrega tu dirección de correo "From"
+          to: formData.correo, // Suponiendo que `correo` es el correo del autorizador
+          subject: 'Autorización de Formulario Requerida',
+          html: `<p>Por favor, autoriza o no autoriza el formulario haciendo clic en uno de los siguientes enlaces:</p>
+<a href="${authorizationLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px;">Autorizar</a><br><br>
+<a href="${noAuthorizationLink}" style="background-color: #f44336; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px;">No Autorizar</a>`,
+          attachments: [
+            {
+                filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
+                path: pdfPath, // Ruta al archivo PDF
+                contentType: 'application/pdf'
             }
+        ]
+      }).then(info => {
+          res.send('Formulario enviado y correo de autorización enviado.');
+      }).catch(error => {
+          console.error('Error al enviar correo de autorización:', error);
+          res.status(500).send('Error al enviar correo de autorización.');
+      });
+  });
+});
+//--------------------------------------------------------------------------------------------------------Auutorizar-------------------------------------------------------------------------------------------
+app.get('/autorizar-formulario/:token', async (req, res) => {
+    const { token } = req.params;
+    const docRef = db.collection('solicitudesPendientes').doc(token);
+    const doc = await docRef.get();
 
-            const documentBase64 = data.toString('base64');
+    if (!doc.exists) {
+        return res.status(404).send('La solicitud no existe o ya fue procesada.');
+    }
 
-            try {
-                const accountInfo = await authenticate();
-                // Prepara los argumentos para enviar a DocuSign, incluyendo el documento en base64
-                const args = {
-                    accountId: accountInfo.apiAccountId,
-                    accessToken: accountInfo.accessToken,
-                    basePath: accountInfo.basePath,
-                    documentBase64, // PDF en base64
-                    signerEmail: correo, // Correo del firmante
-                    signerName: "Nombre del Firmante", // Nombre del firmante
-                    ccEmail: "email@example.com", // Correo CC (opcional)
-                    ccName: "Nombre CC", // Nombre CC (opcional)
-                };
+    const formData = doc.data();
 
-                const result = await sendEnvelope(args);
-                console.log(`Sobre enviado a DocuSign. EnvelopeId: ${result.envelopeId}`);
+    // No es necesario convertir a ruta absoluta si ya guardaste una ruta absoluta
+    const pdfPath = formData.pdfPath; // Asegúrate de que este campo exista
+    console.log('PDF path:', pdfPath);
 
-                // Configuración del transporte de correo electrónico para notificar al remitente/firmante
-                let transporter = nodemailer.createTransport({
-                    host: process.env.EMAIL_HOST, // Ejemplo: "smtp.office365.com"
-                    port: process.env.EMAIL_PORT, // Ejemplo: 587
-                    secure: false, // Ejemplo: false, para el puerto 587
-                    auth: {
-                        user: process.env.EMAIL_USER,
-                        pass: process.env.EMAIL_PASS,
-                    },
-                    tls: {
-                        rejectUnauthorized: false,
-                    },
-                });
+    if (!fs.existsSync(pdfPath)) {
+        return res.status(500).send('El archivo PDF no existe.');
+    }
+    await db.collection('formulariosAutorizados').doc(token).set(formData);
+    await docRef.delete();
 
-                // Envío del correo electrónico con el PDF adjunto
-                transporter.sendMail({
-                    from: '"Formulario con Firma" ',
-                    to: correo, // Correo del receptor
-                    subject: 'Documento listo para firma',
-                    text: 'Por favor, revisa y firma el documento adjunto.',
-                    attachments: [{
-                        filename: 'Documento.pdf',
-                        path: pdfPath,
-                        contentType: 'application/pdf'
-                    }]
-                }).then(info => {
-                    console.log(`Correo de notificación enviado: ${info.messageId}`);
-                    res.send('Formulario enviado y notificación por correo electrónico realizada.');
-                }).catch(error => {
-                    console.error('Error al enviar correo de notificación:', error);
-                    res.status(500).send('Error al enviar correo de notificación.');
-                });
+    let transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT, 10),
+        secure: process.env.EMAIL_SECURE === 'true',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+    console.log('Correo destinatario:', formData.correoAplicant);
 
-                // Opcional: Eliminar el archivo PDF después del envío
-                fs.unlinkSync(pdfPath);
-
-            } catch (error) {
-                console.error('Error al enviar documento a DocuSign:', error);
-                res.status(500).send('Error al enviar documento a DocuSign.');
+    transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: `${formData.correoaplican}, cobranza@biancorelab.com`, // Define el destinatario directamente para pruebas
+        subject: 'Tu formulario ha sido autorizado',
+        text: 'Nos complace informarte que tu formulario ha sido autorizado.',
+        attachments: [
+            {
+                filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
+                path: pdfPath, // Ruta al archivo PDF
+                contentType: 'application/pdf'
             }
-        });
+        ]
+    }).then(info => {
+        console.log('Correo de confirmación enviado: ', info);
+        res.status(200).send('Formulario autorizado y correo de confirmación enviado.');
+    }).catch(error => {
+        console.error('Error al enviar correo de confirmación:', error);
+        res.status(500).send('Error al enviar correo de confirmación.');
+    });
+});
+// --------------------------------------------------------------------------------------------------------No autorizar-------------------------------------------------------------------------------------------
+app.get('/no-autorizar-formulario/:token', async (req, res) => {
+    const { token } = req.params;
+    const docRef = db.collection('solicitudesPendientes').doc(token);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+        return res.status(404).send('La solicitud no existe o ya fue procesada.');
+    }
+
+    const formData = doc.data();
+    // Opcionalmente, puedes mover el documento a otra colección, por ejemplo, 'formulariosNoAutorizados'
+    await db.collection('formulariosNoAutorizados').doc(token).set(formData);
+    await docRef.delete();
+
+    // Envía un correo de notificación de no autorización
+    let transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT, 10),
+        secure: process.env.EMAIL_SECURE === 'true',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+
+    transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: `${formData.correoAplicant}, cobranza@biancorelab.com`,
+        subject: 'Formulario No Autorizado',
+        text: `El formulario solicitado por ${formData.applicant} ha sido no autorizado.`,
+        // Aquí decides si enviar o no el PDF como en el correo de autorización
+    }).then(info => {
+        console.log('Correo de no autorización enviado:', info);
+        res.status(200).send('Formulario no autorizado y correo de notificación enviado.');
+    }).catch(error => {
+        console.error('Error al enviar correo de no autorización:', error);
+        res.status(500).send('Error al enviar correo de no autorización.');
     });
 });
 
-});
 
 app.listen(port, () => {
     console.log(`Servidor ejecutándose en http://localhost:${port}`);

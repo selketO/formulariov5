@@ -27,8 +27,9 @@
         </div>
         <div class="row">
             <div class="col-50">
-                <label for="applicant" class="field-label">Solicitante (Operador):</label>
-                <input type="text" class="field-input" id="applicant" name="applicant">
+                <select id="applicant" name="applicant" class="field-input">
+                    <!-- Opciones de aplicantes se agregarán aquí dinámicamente con JavaScript -->
+                </select>
                 <label for="area" class="field-label">Área:</label>
                 <select class="field-input" id="area" name="area">
                     <!-- Opciones de área aquí -->
@@ -89,6 +90,7 @@
         <div class="row">
             <div class="col-100">
                 <input type="hidden" class="field-input" id="correo" name="correo" required>
+                <input type="hidden" class="field-input" id="correoAplicant" name="correoAplicant" required>
             </div>
         </div>
         <div class="row">
@@ -123,6 +125,7 @@
 
             var data = signaturePad.toDataURL(); // Obtener la imagen de la firma en base64
             var correo = document.getElementById('correo').value;
+            var correoAplicant = document.getElementById('correoAplicant').value;
                     // Recoger los valores de los demás campos del formulario
             var applicant = document.getElementById('applicant').value;
             var area = document.getElementById('area').value;
@@ -143,7 +146,7 @@
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ firma: data, date: date, credit: credit, folio: folio, budgetItem: budgetItem, applicant:applicant,correo: correo, description: description, area: area, productService: productService,quantity: quantity,expenseAmount: expenseAmount,provider: provider, paymentForm: paymentForm}),
+                body: JSON.stringify({ correoAplicant:correoAplicant,firma: data, date: date, credit: credit, folio: folio, budgetItem: budgetItem, applicant:applicant,correo: correo, description: description, area: area, productService: productService,quantity: quantity,expenseAmount: expenseAmount,provider: provider, paymentForm: paymentForm}),
             })
             .then(response => response.text())
             .then(data => {
