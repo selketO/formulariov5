@@ -11,6 +11,7 @@ const cors = require('cors');
 app.use(cors());
 app.use(express.json()); // para parsing application/json
 app.use(express.static('public'));
+const { getStorage, ref, uploadBytes } = require('firebase/storage');
 const serviceAccount = require('./formulario-if---ft-firebase-adminsdk-u9bim-fd525dbea7.json');
 const { v4: uuidv4 } = require('uuid');
 
@@ -26,20 +27,39 @@ app.get('/', (req, res) => {
 function generateUniqueId() {
     return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
+const storage = getStorage();
 app.post('/enviar-formulario', async (req, res) => {
     const { firma, correo,correoAplicant, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
 
     // Directorio y nombre del archivo PDF
-    const pdfDir = path.join(__dirname, "pdfs");
-    const pdfFilename = `firma-${Date.now()}.pdf`;
-    const pdfPath = path.join(pdfDir, pdfFilename);
+    const doc = new PDFDocument();
+    let buffers = [];
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', async () => {
+        const pdfData = Buffer.concat(buffers);
+        const pdfFilename = `firma-${Date.now()}.pdf`;
+        const pdfRef = ref(storage, `pdfs/${pdfFilename}`);
+        
+        // Sube el PDF a Firebase Storage
+        uploadBytes(pdfRef, pdfData).then(async (snapshot) => {
+            console.log('PDF uploaded to Firebase Storage');
+            const formData = { ...req.body, pdfFilename }; // Guarda el nombre del archivo en lugar de la ruta
+            const uniqueToken = uuidv4();
+            await db.collection('solicitudesPendientes').doc(uniqueToken).set(formData);
+
+            // Aquí sigue tu lógica para enviar el correo...
+        }).catch((error) => {
+            console.error('Error uploading PDF to Firebase Storage:', error);
+            res.status(500).send('Error processing your request.');
+        });
+    });
+
 
     // Verifica y crea el directorio si no existe
     if (!fs.existsSync(pdfDir)) {
         fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    const doc = new PDFDocument();
     const stream = fs.createWriteStream(pdfPath);
 
     // Define constants for layout
@@ -161,8 +181,8 @@ app.post('/enviar-formulario', async (req, res) => {
 });
 //--------------------------------------------------------------------------------------------------------Auutorizar-------------------------------------------------------------------------------------------
 app.get('/autorizar-formulario/:token', async (req, res) => {
-    const { token } = req.params;
-    const docRef = db.collection('solicitudesPendientes').doc(token);
+    // Operaciones para obtener los datos de Firestore
+    const docRef = db.collection('solicitudesPendientes').doc(req.params.token);
     const doc = await docRef.get();
 
     if (!doc.exists) {
@@ -170,46 +190,31 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
     }
 
     const formData = doc.data();
-    const pdfFilename = formData.pdfFilename; // Asumimos que esto es el nombre del archivo guardado
-    const pdfPath = path.join(__dirname, "pdfs", pdfFilename);
+    const pdfRef = ref(storage, `pdfs/${formData.pdfFilename}`);
 
-    try {
-        // Usar fs.promises para acceder al archivo
-        await fs.promises.access(pdfPath, fs.constants.F_OK);
-        
-        // El archivo existe, proceder con la operación
-        await db.collection('formulariosAutorizados').doc(token).set(formData);
-        await docRef.delete();
-
-        let transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT, 10),
-            secure: process.env.EMAIL_SECURE === 'true',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-
-        await transporter.sendMail({
+    getDownloadURL(pdfRef).then(async (url) => {
+        // Lógica para enviar el correo con la URL del PDF
+        // Ejemplo de envío de correo usando nodemailer con la URL incluida
+        let mailOptions = {
             from: process.env.EMAIL_FROM,
-            to: `${formData.correoAplicant}, cobranza@biancorelab.com`,
-            subject: 'Tu formulario ha sido autorizado',
-            text: 'Nos complace informarte que tu formulario ha sido autorizado.',
-            attachments: [{
-                filename: 'Formulario-Autorizado.pdf',
-                path: pdfPath,
-                contentType: 'application/pdf'
-            }]
+            to: `${formData.correoAplicant}, cobranza@example.com`,
+            subject: 'Documento Autorizado',
+            html: `El documento ha sido autorizado. Puede descargarlo aquí: <a href="${url}">Descargar PDF</a>`
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error('Error sending email:', error);
+                return res.status(500).send('Error sending email.');
+            } else {
+                console.log('Email sent:', info.response);
+                res.send('Documento autorizado y correo enviado.');
+            }
         });
-        
-        console.log('Correo de confirmación enviado');
-        res.send('Formulario autorizado y correo de confirmación enviado.');
-    } catch (error) {
-        // Manejar errores, como archivo no encontrado o error al enviar correo
-        console.error('Error al procesar la autorización:', error);
-        res.status(500).send('Error al procesar la solicitud de autorización.');
-    }
+    }).catch((error) => {
+        console.error('Error getting PDF download URL:', error);
+        res.status(500).send('Error processing your request.');
+    });
 });
 // --------------------------------------------------------------------------------------------------------No autorizar-------------------------------------------------------------------------------------------
 app.get('/no-autorizar-formulario/:token', async (req, res) => {
