@@ -115,7 +115,7 @@ app.post('/enviar-formulario', async (req, res) => {
       // Guarda los datos del formulario con el token en Firestore
       await db.collection('solicitudesPendientes').doc(uniqueToken).set(formData);
   
-      const authorizationLink = 'https://formulariov2.onrender.com/autorizar-formulario/${uniqueToken}`;
+      const authorizationLink = `https://formulariov2.onrender.com/autorizar-formulario/${uniqueToken}`;
       const noAuthorizationLink = `https://formulariov2.onrender.com/no-autorizar-formulario/${uniqueToken}`;
 
   
