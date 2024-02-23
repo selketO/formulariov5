@@ -11,7 +11,6 @@ const cors = require('cors');
 app.use(cors());
 app.use(express.json()); // para parsing application/json
 app.use(express.static('public'));
-const { getStorage, ref, uploadBytes } = require('firebase/storage');
 const serviceAccount = require('./formulario-if---ft-firebase-adminsdk-u9bim-fd525dbea7.json');
 const { v4: uuidv4 } = require('uuid');
 
@@ -27,39 +26,12 @@ app.get('/', (req, res) => {
 function generateUniqueId() {
     return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
-const storage = getStorage();
 app.post('/enviar-formulario', async (req, res) => {
     const { firma, correo,correoAplicant, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
 
-    // Directorio y nombre del archivo PDF
+    // Crear un documento PDF
     const doc = new PDFDocument();
-    let buffers = [];
-    doc.on('data', buffers.push.bind(buffers));
-    doc.on('end', async () => {
-        const pdfData = Buffer.concat(buffers);
-        const pdfFilename = `firma-${Date.now()}.pdf`;
-        const pdfRef = ref(storage, `pdfs/${pdfFilename}`);
-        
-        // Sube el PDF a Firebase Storage
-        uploadBytes(pdfRef, pdfData).then(async (snapshot) => {
-            console.log('PDF uploaded to Firebase Storage');
-            const formData = { ...req.body, pdfFilename }; // Guarda el nombre del archivo en lugar de la ruta
-            const uniqueToken = uuidv4();
-            await db.collection('solicitudesPendientes').doc(uniqueToken).set(formData);
-
-            // Aquí sigue tu lógica para enviar el correo...
-        }).catch((error) => {
-            console.error('Error uploading PDF to Firebase Storage:', error);
-            res.status(500).send('Error processing your request.');
-        });
-    });
-
-
-    // Verifica y crea el directorio si no existe
-    if (!fs.existsSync(pdfDir)) {
-        fs.mkdirSync(pdfDir, { recursive: true });
-    }
-
+    const pdfPath = `firma-${Date.now()}.pdf`;
     const stream = fs.createWriteStream(pdfPath);
 
     // Define constants for layout
@@ -137,14 +109,14 @@ app.post('/enviar-formulario', async (req, res) => {
    stream.on('finish', async () => {
 
 
-    const formData = { ...req.body, pdfFilename  };
+    const formData = { ...req.body, pdfPath };
       const uniqueToken = uuidv4();
   
       // Guarda los datos del formulario con el token en Firestore
       await db.collection('solicitudesPendientes').doc(uniqueToken).set(formData);
   
-      const authorizationLink = `http://localhost:${port}/autorizar-formulario/${uniqueToken}`;
-      const noAuthorizationLink = `http://localhost:${port}/no-autorizar-formulario/${uniqueToken}`;
+      const authorizationLink = 'https://formulariov2.onrender.com/autorizar-formulario/${uniqueToken}`;
+      const noAuthorizationLink = `https://formulariov2.onrender.com/no-autorizar-formulario/${uniqueToken}`;
 
   
       let transporter = nodemailer.createTransport({
@@ -181,8 +153,8 @@ app.post('/enviar-formulario', async (req, res) => {
 });
 //--------------------------------------------------------------------------------------------------------Auutorizar-------------------------------------------------------------------------------------------
 app.get('/autorizar-formulario/:token', async (req, res) => {
-    // Operaciones para obtener los datos de Firestore
-    const docRef = db.collection('solicitudesPendientes').doc(req.params.token);
+    const { token } = req.params;
+    const docRef = db.collection('solicitudesPendientes').doc(token);
     const doc = await docRef.get();
 
     if (!doc.exists) {
@@ -190,30 +162,59 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
     }
 
     const formData = doc.data();
-    const pdfRef = ref(storage, `pdfs/${formData.pdfFilename}`);
 
-    getDownloadURL(pdfRef).then(async (url) => {
-        // Lógica para enviar el correo con la URL del PDF
-        // Ejemplo de envío de correo usando nodemailer con la URL incluida
-        let mailOptions = {
-            from: process.env.EMAIL_FROM,
-            to: `${formData.correoAplicant}, cobranza@example.com`,
-            subject: 'Documento Autorizado',
-            html: `El documento ha sido autorizado. Puede descargarlo aquí: <a href="${url}">Descargar PDF</a>`
-        };
+    // No es necesario convertir a ruta absoluta si ya guardaste una ruta absoluta
+    const pdfPath = formData.pdfPath; // Asegúrate de que este campo exista
+    console.log('PDF path:', pdfPath);
 
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                console.error('Error sending email:', error);
-                return res.status(500).send('Error sending email.');
-            } else {
-                console.log('Email sent:', info.response);
-                res.send('Documento autorizado y correo enviado.');
+    if (!fs.existsSync(pdfPath)) {
+        return res.status(500).send('El archivo PDF no existe.');
+    }
+    await db.collection('formulariosAutorizados').doc(token).set(formData);
+    await docRef.delete();
+
+    let transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT, 10),
+        secure: process.env.EMAIL_SECURE === 'true',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+    console.log('Correo destinatario:', formData.correoAplicant);
+
+    transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: `${formData.correoAplicant}, cobranza@biancorelab.com`, // Define el destinatario directamente para pruebas
+        subject: 'Tu formulario ha sido autorizado',
+        text: 'Nos complace informarte que tu formulario ha sido autorizado.',
+        attachments: [
+            {
+                filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
+                path: pdfPath, // Ruta al archivo PDF
+                contentType: 'application/pdf'
             }
-        });
-    }).catch((error) => {
-        console.error('Error getting PDF download URL:', error);
-        res.status(500).send('Error processing your request.');
+        ]
+    }).then(info => {
+        console.log('Correo de confirmación enviado: ', info);
+        res.send(`
+    <html>
+        <body>
+            <p>La acción ha sido procesada. Esta ventana se cerrará automáticamente.</p>
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.close();
+                    }, 1500); // Espera 3 segundos antes de intentar cerrar
+                };
+            </script>
+        </body>
+    </html>
+`);
+    }).catch(error => {
+        console.error('Error al enviar correo de confirmación:', error);
+        res.status(500).send('Error al enviar correo de confirmación.');
     });
 });
 // --------------------------------------------------------------------------------------------------------No autorizar-------------------------------------------------------------------------------------------
