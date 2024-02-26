@@ -13,7 +13,7 @@ app.use(express.json()); // para parsing application/json
 app.use(express.static('public'));
 const serviceAccount = require('./formulario-if---ft-firebase-adminsdk-u9bim-fd525dbea7.json');
 const { v4: uuidv4 } = require('uuid');
-
+ 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
@@ -28,69 +28,61 @@ function generateUniqueId() {
 }
 app.post('/enviar-formulario', async (req, res) => {
     const { firma, correo,correoAplicant, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
-
-    // Directorio y nombre del archivo PDF
-    const pdfDir = path.join(__dirname, "pdfs");
-    const pdfFilename = `firma-${Date.now()}.pdf`;
-    const pdfPath = path.join(pdfDir, pdfFilename);
-
-    // Verifica y crea el directorio si no existe
-    if (!fs.existsSync(pdfDir)) {
-        fs.mkdirSync(pdfDir, { recursive: true });
-    }
-
+ 
+    // Crear un documento PDF
     const doc = new PDFDocument();
+    const pdfPath = `firma-${Date.now()}.pdf`;
     const stream = fs.createWriteStream(pdfPath);
-
+ 
     // Define constants for layout
     const margin = 50;
     const pageWidth = doc.page.width - 2 * margin;
     const lineHeight = 14;
     const imagePath = path.join(__dirname, "public", "img", "LOGO BCL H.png");
-
+ 
     doc.image(imagePath, margin, 40, { width: 150 }); // Ajusta la posición y el tamaño según sea necesario
-
+ 
     // Mover la posición vertical para el título debajo de la imagen del logo
     let yPos = 120; // Esto coloca el título justo debajo de la imagen del logo
-    
-
-    
+   
+ 
+   
     // Title of the form
     doc.fontSize(16)
        .font('Helvetica-Bold')
        .text('Formato de Requisición', margin, yPos - 30, { align: 'center' });
-    
+   
     // Agregar el número de folio y la fecha a la derecha de la cabecera
     doc.fontSize(10)
        .font('Helvetica')
        .text(`# Folio: ${folio}`, pageWidth + margin - 150, yPos - 30, { width: 140, align: 'right' })
        .text(`Fecha: ${date}`, pageWidth + margin - 150, yPos - 15, { width: 140, align: 'right' });
-    
+   
     // Mover la posición vertical para el cuerpo del formulario
     yPos += 50;
-    
-
+   
+ 
     // Función para añadir campos de formulario
     function addFormField(label, value, y, xOffset = 150) {
         const fieldHeight = 15; // Altura del campo de texto
         const fieldPadding = 2; // Espacio adicional para que el texto no toque los bordes del rectángulo
         const valueWidth = pageWidth - (margin + xOffset);
-        
+       
         // Dibujar el rectángulo de fondo para el valor
         doc.rect(margin + xOffset, y + fieldPadding, valueWidth, fieldHeight)
            .fillOpacity(0.5) // Puedes ajustar la opacidad según necesites
            .fillAndStroke('grey', 'grey'); // El relleno y el borde del rectángulo
-    
+   
         // Resetear la opacidad para el texto
         doc.fillOpacity(1);
-    
+   
         // Imprime el título
         doc.font('Helvetica').fontSize(10).fillColor('black');
         doc.text(label, margin, y, { width: 240, align: 'left' });
-    
+   
         // Imprime el valor con un poco de padding dentro del rectángulo
         doc.text(value || '', margin + xOffset + fieldPadding, y + fieldPadding, { width: valueWidth - (2 * fieldPadding), align: 'left' });
-    
+   
         yPos += fieldHeight + (2 * fieldPadding); // Añadir espacio vertical después de cada campo
     }
     // Añadir los campos de formulario
@@ -104,29 +96,106 @@ app.post('/enviar-formulario', async (req, res) => {
     addFormField('Forma de Pago:', paymentForm, yPos);
     addFormField('Días de crédito:', credit.toString(), yPos);
     addFormField('Rubro Presupuestal:', budgetItem, yPos);
-
+ 
     // Add extra space for the last field before signatures
     yPos += lineHeight * 2;
-
+ 
     doc.pipe(stream);
     // Aquí agregarías el contenido a tu PDF, como se hizo anteriormente
     doc.fontSize(25).text('', 100, 80);
     doc.end();
-
+ 
    // Esperar a que el PDF se haya generado completamente
    stream.on('finish', async () => {
-
-
-    const formData = { ...req.body, pdfFilename  };
+ 
+ 
+    const formData = { ...req.body, pdfPath };
       const uniqueToken = uuidv4();
-  
+ 
       // Guarda los datos del formulario con el token en Firestore
       await db.collection('solicitudesPendientes').doc(uniqueToken).set(formData);
-  
-      const authorizationLink = `http://localhost:${port}/autorizar-formulario/${uniqueToken}`;
-      const noAuthorizationLink = `http://localhost:${port}/no-autorizar-formulario/${uniqueToken}`;
-
-  
+ 
+      const authorizationLink = `https://formulariov2.onrender.com/autorizar-formulario/${uniqueToken}`;
+      const noAuthorizationLink = `https://formulariov2.onrender.com/no-autorizar-formulario/${uniqueToken}`;
+      const htmlEmailContent = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+              body {
+                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                  color: #333;
+                  line-height: 1.6;
+              }
+              .email-container {
+                  max-width: 600px;
+                  margin: 20px auto;
+                  padding: 20px;
+                  border: 1px solid #ddd;
+                  border-radius: 5px;
+              }
+              .header {
+                  text-align: left;
+                  border-bottom: 2px solid #005687;
+                  padding-bottom: 10px;
+                  margin-bottom: 20px;
+              }
+              .email-content {
+                  text-align: left;
+                  margin-top: 20px;
+              }
+              .footer {
+                  text-align: center;
+                  margin-top: 30px;
+                  padding-top: 10px;
+                  font-size: 0.8em;
+                  color: #888;
+              }
+              .button {
+                  padding: 10px 20px;
+                  margin: 10px 5px;
+                  color: white;
+                  border: none;
+                  border-radius: 5px;
+                  cursor: pointer;
+                  text-decoration: none;
+              }
+              .authorize {
+                  background-color: #28a745;
+              }
+              .decline {
+                  background-color: #dc3545;
+              }
+              .button-container {
+                  text-align: center;
+              }
+          </style>
+      </head>
+      <body>
+          <div class="email-container">
+              <div class="header">
+                  <img src="cid:logoBCLH" alt="Logo" style="max-width: 150px;">
+              </div>
+              <div class="email-content">
+                  <p>Estimado/a ${formData.correo},</p>
+                  <p>Por favor, autorice el gasto de <strong>${formData.productService}</strong>, por un monto de <strong>${formData.expenseAmount}</strong> correspondiente a la partida presupuestal <strong>${formData.budgetItem}</strong>. Encuentra los detalles adjuntos. Gracias.</p>
+                  <p>Saludos cordiales,<br>${formData.applicant}</p>
+              </div>
+              <div class="button-container">
+                  <a href="${authorizationLink}" class="button authorize">Autorizar</a>
+                  <a href="${noAuthorizationLink}" class="button decline">No Autorizar</a>
+              </div>
+              <div class="footer">
+                  <p>Este es un mensaje automático, por favor no responder directamente.</p>
+              </div>
+          </div>
+      </body>
+      </html>
+      `;
+     
+ 
       let transporter = nodemailer.createTransport({
           host: process.env.EMAIL_HOST,
           port: parseInt(process.env.EMAIL_PORT, 10),
@@ -136,19 +205,22 @@ app.post('/enviar-formulario', async (req, res) => {
               pass: process.env.EMAIL_PASS,
           },
       });
-  
+ 
       transporter.sendMail({
           from: process.env.EMAIL_FROM, // Agrega tu dirección de correo "From"
           to: formData.correo, // Suponiendo que `correo` es el correo del autorizador
-          subject: 'Autorización de Formulario Requerida',
-          html: `<p>Por favor, autoriza o no autoriza el formulario haciendo clic en uno de los siguientes enlaces:</p>
-<a href="${authorizationLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px;">Autorizar</a><br><br>
-<a href="${noAuthorizationLink}" style="background-color: #f44336; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; border-radius: 5px;">No Autorizar</a>`,
+          subject: 'Autorización de Solped Requerida',
+          html: htmlEmailContent,
           attachments: [
             {
                 filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
                 path: pdfPath, // Ruta al archivo PDF
                 contentType: 'application/pdf'
+            },
+            {
+                filename: 'LOGO BCL H.png',
+                path: path.join(__dirname, "public", "img", "LOGO BCL H.png"),
+                cid: 'logoBCLH' // Este CID se usa en el src del img tag en el HTML
             }
         ]
       }).then(info => {
@@ -164,53 +236,65 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
     const { token } = req.params;
     const docRef = db.collection('solicitudesPendientes').doc(token);
     const doc = await docRef.get();
-
+ 
     if (!doc.exists) {
         return res.status(404).send('La solicitud no existe o ya fue procesada.');
     }
-
+ 
     const formData = doc.data();
-    const pdfFilename = `firma-${formData.date}.pdf`; // Asumiendo que 'formData.date' tiene el formato adecuado y único para el nombre del archivo
-    const pdfPath = path.join(__dirname, 'pdfs', pdfFilename);
-
-    // Verifica si el archivo PDF existe antes de intentar enviarlo
-    fs.access(pdfPath, fs.constants.F_OK, (err) => {
-        if (err) {
-            console.error('El archivo PDF no existe:', err);
-            return res.status(500).send('El archivo PDF no existe.');
-        }
-
-        // Procede a mover el documento a la colección de autorizados y enviar el correo
-        await db.collection('formulariosAutorizados').doc(token).set(formData);
-        await docRef.delete();
-
-        let transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT, 10),
-            secure: process.env.EMAIL_SECURE === 'true',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
-
-        transporter.sendMail({
-            from: process.env.EMAIL_FROM,
-            to: `${formData.correoAplicant}, cobranza@biancorelab.com`,
-            subject: 'Tu formulario ha sido autorizado',
-            text: 'Nos complace informarte que tu formulario ha sido autorizado.',
-            attachments: [{
-                filename: 'Formulario-Autorizado.pdf',
-                path: pdfPath,
+ 
+    // No es necesario convertir a ruta absoluta si ya guardaste una ruta absoluta
+    const pdfPath = formData.pdfPath; // Asegúrate de que este campo exista
+    console.log('PDF path:', pdfPath);
+ 
+    if (!fs.existsSync(pdfPath)) {
+        return res.status(500).send('El archivo PDF no existe.');
+    }
+    await db.collection('formulariosAutorizados').doc(token).set(formData);
+    await docRef.delete();
+ 
+    let transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT, 10),
+        secure: process.env.EMAIL_SECURE === 'true',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+    console.log('Correo destinatario:', formData.correoAplicant);
+ 
+    transporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: `${formData.correoAplicant}, cobranza@biancorelab.com`, // Define el destinatario directamente para pruebas
+        subject: 'Tu formulario ha sido autorizado',
+        text: 'Nos complace informarte que tu formulario ha sido autorizado.',
+        attachments: [
+            {
+                filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
+                path: pdfPath, // Ruta al archivo PDF
                 contentType: 'application/pdf'
-            }]
-        }).then(info => {
-            console.log('Correo de confirmación enviado: ', info);
-            res.send('Formulario autorizado y correo de confirmación enviado.');
-        }).catch(error => {
-            console.error('Error al enviar correo de confirmación:', error);
-            res.status(500).send('Error al enviar correo de confirmación.');
-        });
+            }
+        ]
+    }).then(info => {
+        console.log('Correo de confirmación enviado: ', info);
+        res.send(`
+    <html>
+        <body>
+            <p>La acción ha sido procesada. Esta ventana se cerrará automáticamente.</p>
+            <script>
+                window.onload = function() {
+                    setTimeout(function() {
+                        window.close();
+                    }, 1500); // Espera 3 segundos antes de intentar cerrar
+                };
+            </script>
+        </body>
+    </html>
+`);
+    }).catch(error => {
+        console.error('Error al enviar correo de confirmación:', error);
+        res.status(500).send('Error al enviar correo de confirmación.');
     });
 });
 // --------------------------------------------------------------------------------------------------------No autorizar-------------------------------------------------------------------------------------------
@@ -218,16 +302,16 @@ app.get('/no-autorizar-formulario/:token', async (req, res) => {
     const { token } = req.params;
     const docRef = db.collection('solicitudesPendientes').doc(token);
     const doc = await docRef.get();
-
+ 
     if (!doc.exists) {
         return res.status(404).send('La solicitud no existe o ya fue procesada.');
     }
-
+ 
     const formData = doc.data();
     // Opcionalmente, puedes mover el documento a otra colección, por ejemplo, 'formulariosNoAutorizados'
     await db.collection('formulariosNoAutorizados').doc(token).set(formData);
     await docRef.delete();
-
+ 
     // Envía un correo de notificación de no autorización
     let transporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
@@ -238,7 +322,7 @@ app.get('/no-autorizar-formulario/:token', async (req, res) => {
             pass: process.env.EMAIL_PASS,
         },
     });
-
+ 
     transporter.sendMail({
         from: process.env.EMAIL_FROM,
         to: `${formData.correoAplicant}, cobranza@biancorelab.com`,
@@ -266,8 +350,8 @@ app.get('/no-autorizar-formulario/:token', async (req, res) => {
         res.status(500).send('Error al enviar correo de no autorización.');
     });
 });
-
-
+ 
+ 
 app.listen(port, () => {
     console.log(`Servidor ejecutándose en http://localhost:${port}`);
 });

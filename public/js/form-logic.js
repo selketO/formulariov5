@@ -61,13 +61,33 @@ document.addEventListener('DOMContentLoaded', function() {
     { name: 'Luis Ceballos', email: 'luis@biancorelab.com' }
 ];
   const areaToBudgetItems = {
-      'Comercial': {
-        "Licencia de Xtract (Ventas)": "edelgado@biancorelab.com",
-        "Asociacion de Nacional de Tiendas y Autoservicios departamentales": "carlos@biancorelab.com",
-        "Asociación Mexicana de Estándares para el Comercio Electrónico, Asociación Civil": "carlos@biancorelab.com",
-        "Regalos a clientes": "francisco@biancorelab.com",
-        "Servicios Comerciales Amazon Mexico": "francisco@biancorelab.com"
-      },
+    'Comercial': {
+      "Licencia de Xtract (Ventas)": "edelgado@biancorelab.com",
+      "Asociacion de Nacional de Tiendas y Autoservicios departamentales": "carlos@biancorelab.com",
+      "Asociación Mexicana de Estándares para el Comercio Electrónico, Asociación Civil": "carlos@biancorelab.com",
+      "Regalos a clientes": "francisco@biancorelab.com",
+      "Servicios Comerciales Amazon Mexico": "francisco@biancorelab.com",
+      "Bonos de Venta": "carlos@biancorelab.com",
+      "Apoyo de Transporte (Ejecutivos - KAMs)": "carlos@biancorelab.com",
+      "Capacitación Comercial": "carlos@biancorelab.com",
+      "Asesoria Comité Comercial (APV)": "carlos@biancorelab.com",
+      "Estudio de mercado Nobook": "carlos@biancorelab.com",
+      "Seguro Zurich Santander ZEIT acevedo P.111406051": "carlos@biancorelab.com",
+      "Axa Seguros Eduardo Macias Control de gastos medicos P.92484AQ02": "carlos@biancorelab.com",
+      "MultipleZurich1 29 0000029815-1 Adolf Horn": "carlos@biancorelab.com",
+      "BIANCORE LAB SA DE CV Mariana Rivas DF HYUNDAI": "carlos@biancorelab.com",
+      "Mtto de Equipo de Transporte (Mariana)": "carlos@biancorelab.com",
+      "Muestras de productos": "francisco@biancorelab.com",
+      "Detecno": "francisco@biancorelab.com",
+      "AIR Llogistic gps": "francisco@biancorelab.com",
+      "Anadim": "francisco@biancorelab.com",
+      "Carvajal Tecnologia y Servicios": "francisco@biancorelab.com",
+      "Nadro": "francisco@biancorelab.com",
+      "Tiendas Chedraui": "francisco@biancorelab.com",
+      "Tiendas Soriana": "francisco@biancorelab.com",
+      "Time Tracker de Mexico (City Fresko)": "francisco@biancorelab.com",
+      "Wendy Isabel Navarrete Navarrete (Buzón Soriana)": "francisco@biancorelab.com"
+    },
       'Contabilidad': {
         "IMSS": "cloera@biancorelab.com",
         "RCV - Infonavit": "cloera@biancorelab.com",
