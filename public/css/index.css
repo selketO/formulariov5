@@ -120,3 +120,42 @@ canvas {
     font-weight: bold; /* Hace que el texto sea en negritas */
     margin-bottom: 10px; /* Espacio entre la etiqueta y el canvas */
 }
+/* Estilos para el contenedor de Select2 para que coincida con tu diseño */
+.select2-container .select2-selection--single {
+    height: auto; /* Altura automática */
+    background-color: #fff; /* Fondo blanco */
+    border: 1px solid #ccd0d5; /* Borde como tus otros campos */
+    border-radius: 4px; /* Bordes redondeados */
+    padding: 6px; /* Espaciado interno */
+    font-size: 14px; /* Tamaño de fuente */
+    line-height: 1.42857143; /* Altura de línea para que coincida con tus campos */
+}
+
+/* Estilos para el texto dentro del Select2 */
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #555; /* Color del texto */
+    line-height: 28px; /* Altura de línea para centrar verticalmente el texto */
+}
+
+/* Estilos para la flecha desplegable de Select2 */
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px; /* Altura para alinear con el tamaño del input */
+    position: absolute;
+    top: 1px; /* Ajuste fino para alinear la flecha */
+    right: 1px; /* Ajuste fino para alinear la flecha */
+    width: 20px; /* Ancho de la flecha */
+}
+
+/* Estilos para el dropdown de Select2 */
+.select2-container--default .select2-dropdown {
+    border: 1px solid #ccd0d5; /* Borde como tus otros campos */
+    border-radius: 0 0 4px 4px; /* Bordes redondeados */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra suave como tus otros campos */
+}
+
+/* Estilos para los items del dropdown de Select2 */
+.select2-container--default .select2-results__option {
+    padding: 6px; /* Espaciado interno para los items */
+    margin: 0; /* Sin margen externo */
+    font-size: 14px; /* Tamaño de fuente */
+}

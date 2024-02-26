@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
 const app = express();
-const port = 3000;
+const port = 3001;
 require('dotenv').config();
 const admin = require('firebase-admin');
 const cors = require('cors');
@@ -27,7 +27,7 @@ function generateUniqueId() {
     return `id_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 app.post('/enviar-formulario', async (req, res) => {
-    const { firma, correo,correoAplicant, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
+    const { firma, correo,correoAplicant, Mount, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
  
     // Crear un documento PDF
     const doc = new PDFDocument();
@@ -93,6 +93,7 @@ app.post('/enviar-formulario', async (req, res) => {
     addFormField('Proveedor:', provider, yPos);
     addFormField('Descripción / Observaciones de Producto o Servicio:', description, yPos, 250);
     addFormField('Monto de Gasto (Pesos / sin iva):', expenseAmount.toString(), yPos, 175);
+    addFormField('Monto Total:', Mount.toString(), yPos);
     addFormField('Forma de Pago:', paymentForm, yPos);
     addFormField('Días de crédito:', credit.toString(), yPos);
     addFormField('Rubro Presupuestal:', budgetItem, yPos);
@@ -115,8 +116,8 @@ app.post('/enviar-formulario', async (req, res) => {
       // Guarda los datos del formulario con el token en Firestore
       await db.collection('solicitudesPendientes').doc(uniqueToken).set(formData);
  
-      const authorizationLink = `https://formulariov2.onrender.com/autorizar-formulario/${uniqueToken}`;
-      const noAuthorizationLink = `https://formulariov2.onrender.com/no-autorizar-formulario/${uniqueToken}`;
+      const authorizationLink = `https://formulariov3.onrender.com/autorizar-formulario/${uniqueToken}`;
+      const noAuthorizationLink = `https://formulariov3.onrender.com/no-autorizar-formulario/${uniqueToken}`;
       const htmlEmailContent = `
       <!DOCTYPE html>
       <html lang="es">
