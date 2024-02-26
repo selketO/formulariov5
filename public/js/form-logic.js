@@ -20,22 +20,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Función para generar un nuevo folio
   const generateFolio = async () => {
+    // Aquí se supone que tienes una colección 'settings' donde guardas el último folio usado.
     const folioDoc = await db.collection('settings').doc('folio').get();
     const folioData = folioDoc.data();
-    let newFolio = folioData.currentFolio || 0;
+    const newFolio = (folioData.currentFolio || 0) + 1;
     
-    // Verifica si el folio ya ha sido utilizado consultando en la colección donde guardas los formularios
-    const existingForm = await db.collection('requisitions').where('folio', '==', newFolio).get();
-    if (existingForm.empty) {
-      // Si no hay formularios con el mismo folio, incrementa el folio
-      newFolio += 1;
-      await db.collection('settings').doc('folio').set({ currentFolio: newFolio });
-    }
-    // De lo contrario, usa el folio tal cual, ya que significa que el formulario anterior no se completó/subió correctamente
-    
+    // Actualizar el folio en la base de datos
+    await db.collection('settings').doc('folio').set({ currentFolio: newFolio });
+
     return newFolio;
   };
-  
 
   // Asignar el nuevo folio
   generateFolio().then(newFolio => {
