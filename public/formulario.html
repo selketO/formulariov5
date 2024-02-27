@@ -52,7 +52,6 @@
         </div>
         <div class="row">
             <div class="col-50">
-                <label for="area" class="field-label">Solicitante (Operador):</label>
                 <select id="applicant" name="applicant" class="field-input">
                     <!-- Opciones de aplicantes se agregarán aquí dinámicamente con JavaScript -->
                 </select>
@@ -131,12 +130,6 @@
                 <canvas id="firma" width="400" height="200" style="border:1px solid #000;"></canvas>
             </div>
         </div>
-        <div class="row">
-            <div class="col-100">
-                <label for="attachment" class="field-label">Adjuntar Archivo:</label>
-                <input type="file" class="field-input" id="attachment" name="attachments" multiple>
-            </div>
-        </div>
         
         <div class="row">
             <div class="col-100">
@@ -155,17 +148,6 @@
     <script src="/js/form-logic.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@2.3.2/dist/signature_pad.min.js"></script>
     <script>    
-    document.getElementById('attachment').addEventListener('change', function() {
-    var files = this.files;
-    var size = 0;
-    for (var i = 0; i < files.length; i++) {
-        size += files[i].size;
-    }
-    if (size > 10 * 1024 * 1024) { // 10 MB
-        alert('El tamaño total de los archivos supera el límite de 10 MB');
-        this.value = ''; // Limpiar los archivos seleccionados
-    }
-});
 
         var canvas = document.getElementById('firma');
         var signaturePad = new SignaturePad(canvas);
@@ -180,24 +162,40 @@
 
 
         document.getElementById('miFormulario').addEventListener('submit', function(event) {
-    event.preventDefault(); // Evitar que el formulario se envíe de la manera predeterminada
 
-    var formData = new FormData(this); // 'this' es el formulario, que recoge todos los campos incluyendo los archivos
-
-
-    // Fetch para enviar FormData en lugar de JSON
-    fetch('/enviar-formulario', {
-        method: 'POST',
-        body: formData, // Aquí mandamos el objeto FormData
-    })
-    .then(response => response.text())
-    .then(data => {
-        window.location.reload();
-    })
-    .catch((error) => {
-        console.error('Error:', error);
-    });
-});
+            var data = signaturePad.toDataURL(); // Obtener la imagen de la firma en base64
+            var correo = document.getElementById('correo').value;
+            var correoAplicant = document.getElementById('correoAplicant').value;
+                    // Recoger los valores de los demás campos del formulario
+            var applicant = document.getElementById('applicant').value;
+            var area = document.getElementById('area').value;
+            var productService = document.getElementById('productService').value;
+            var quantity = document.getElementById('quantity').value;
+            var expenseAmount = document.getElementById('expenseAmount').value;
+            var provider = document.getElementById('provider').value;
+            var budgetItem = document.getElementById('budgetItem').value;
+            var paymentForm = document.getElementById('paymentForm').value;
+            var description = document.getElementById('description').value;
+            var date = document.getElementById('date').value;
+            var folio = document.getElementById('folio').value;
+            var credit = document.getElementById('credit').value;
+            console.log(date)
+            
+            fetch('/enviar-formulario', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ Mount: Mount,correoAplicant:correoAplicant,firma: data, date: date, credit: credit, folio: folio, budgetItem: budgetItem, applicant:applicant,correo: correo, description: description, area: area, productService: productService,quantity: quantity,expenseAmount: expenseAmount,provider: provider, paymentForm: paymentForm}),
+            })
+            .then(response => response.text())
+            .then(data => {
+                alert(data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        });
     </script>
 </body>
 </html>

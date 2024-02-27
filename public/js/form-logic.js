@@ -21,12 +21,12 @@ document.addEventListener('DOMContentLoaded', function() {
   // Función para generar un nuevo folio
   const generateFolio = async () => {
     // Aquí se supone que tienes una colección 'settings' donde guardas el último folio usado.
-    const folioDoc = await db.collection('settings').doc('folio').get();
+    const folioDoc = await db.collection('settingsss').doc('folio').get();
     const folioData = folioDoc.data();
     const newFolio = (folioData.currentFolio || 0) + 1;
     
     // Actualizar el folio en la base de datos
-    await db.collection('settings').doc('folio').set({ currentFolio: newFolio });
+    await db.collection('settingsss').doc('folio').set({ currentFolio: newFolio });
 
     return newFolio;
   };
@@ -1084,20 +1084,6 @@ const addProvidersToSelect = (providers) => {
     // Disparar el evento change manualmente para cargar los rubros iniciales
     areaSelect.dispatchEvent(new Event('change'));
 
-  // Inicializar las firmas
-  const signaturePadApplicant = new SignaturePad(document.getElementById('firma'));
-
-  // Botones para guardar y limpiar las firmas
-  document.getElementById('enviar').addEventListener('click', () => {
-    const dataUrl = signaturePadApplicant.toDataURL();
-    // Puedes guardar esta data URL en Firebase o donde sea necesario
-  });
-
-  document.getElementById('clear-applicant').addEventListener('click', () => {
-        event.preventDefault(); // Prevenir el envío del formulario
-    signaturePadApplicant.clear();
-  });
-
 
 
   // Enviar el formulario completo
@@ -1124,7 +1110,7 @@ const addProvidersToSelect = (providers) => {
 
     // Guardar en Firestore
     try {
-      const docRef = await db.collection('requisitions').add(miFormulario);
+      const docRef = await db.collection('peticiones').add(miFormulario);
       console.log('Requisición guardada con ID: ', docRef.id);
       // Aquí podrías redirigir al usuario o mostrar un mensaje de éxito
     } catch (error) {
