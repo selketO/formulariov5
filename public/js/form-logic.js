@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const newFolio = (folioData.currentFolio || 0) + 1;
     
     // Actualizar el folio en la base de datos
-    await db.collection('settingsss').doc('folio').set({ currentFolio: newFolio });
+    await db.collection('settings').doc('folio').set({ currentFolio: newFolio });
 
     return newFolio;
   };
