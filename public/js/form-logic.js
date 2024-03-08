@@ -821,8 +821,8 @@ const addProvidersToSelect = (providers) => {
 
   const selectedApplicants = [
     { name: 'Fernando Vargas', email: 'fvargas@biancorelab.com' },
-    { name: 'Edhson Delgado', email: 'edelgado@biancorelab.com' },
-    { name: 'Irene González', email: 'igonzalez@biancorelab.com' },
+    // { name: 'Edhson Delgado', email: 'edelgado@biancorelab.com' },
+    { name: 'Teresa Hermosillo', email: 'tgallo@biancorelab.com' },
     { name: 'Valeria González', email: 'cobranza@biancorelab.com' },
     { name: 'Christian Loera', email: 'cloera@biancorelab.com' },
     { name: 'Julio López', email: 'jlopez@biancorelab.com' },
