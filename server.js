@@ -132,7 +132,7 @@ app.post('/enviar-formulario', async (req, res) => {
             const uniqueToken = uuidv4();
 
             // Guarda los datos del formulario con el token en Firestore
-            await db.collection('devsolicitudesPendientes').doc(uniqueToken).set(formData);
+            await db.collection('solicitudesPendientes').doc(uniqueToken).set(formData);
             let transporter = nodemailer.createTransport({
                 host: process.env.EMAIL_HOST,
                 port: parseInt(process.env.EMAIL_PORT, 10),
@@ -144,8 +144,8 @@ app.post('/enviar-formulario', async (req, res) => {
             });
     
 
-        const authorizationLink = `https://formulariov4.onrender.com/autorizar-formulario/${uniqueToken}`;
-        const noAuthorizationLink = `https://formulariov4.onrender.com/no-autorizar-formulario/${uniqueToken}`;
+        const authorizationLink = `https://formulariov2.onrender.com/autorizar-formulario/${uniqueToken}`;
+        const noAuthorizationLink = `https://formulariov2.onrender.com/no-autorizar-formulario/${uniqueToken}`;
         const htmlEmailContent = `
       <!DOCTYPE html>
       <html lang="es">
@@ -285,7 +285,7 @@ doc.end();
 //--------------------------------------------------------------------------------------------------------Auutorizar-------------------------------------------------------------------------------------------
 app.get('/autorizar-formulario/:token', async (req, res) => {
     const { token } = req.params;
-    const docRef = db.collection('devsolicitudesPendientes').doc(token);
+    const docRef = db.collection('solicitudesPendientes').doc(token);
     const doc = await docRef.get();
 
     if (!doc.exists) {
@@ -301,7 +301,7 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
         console.error('PDF no encontrado en MongoDB');
         return res.status(404).send('PDF no encontrado.');
     }
-    await db.collection('devformulariosAutorizados').doc(token).set(formData);
+    await db.collection('formulariosAutorizados').doc(token).set(formData);
     await docRef.delete();
 
     let transporter = nodemailer.createTransport({
@@ -351,7 +351,7 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
 // --------------------------------------------------------------------------------------------------------No autorizar-------------------------------------------------------------------------------------------
 app.get('/no-autorizar-formulario/:token', async (req, res) => {
     const { token } = req.params;
-    const docRef = db.collection('devsolicitudesPendientes').doc(token);
+    const docRef = db.collection('solicitudesPendientes').doc(token);
     const doc = await docRef.get();
 
     if (!doc.exists) {
@@ -360,7 +360,7 @@ app.get('/no-autorizar-formulario/:token', async (req, res) => {
 
     const formData = doc.data();
     // Opcionalmente, puedes mover el documento a otra colección, por ejemplo, 'formulariosNoAutorizados'
-    await db.collection('devformulariosNoAutorizados').doc(token).set(formData);
+    await db.collection('formulariosNoAutorizados').doc(token).set(formData);
     await docRef.delete();
 
     // Envía un correo de notificación de no autorización
