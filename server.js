@@ -14,7 +14,7 @@ app.use(express.static('public'));
 const serviceAccount = require('./formulario-if---ft-firebase-adminsdk-u9bim-fd525dbea7.json');
 const { v4: uuidv4 } = require('uuid');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const uri = "mongodb+srv://admin:j4bAB3JN3LBTWJsJ@formulario.ebd59ch.mongodb.net/?retryWrites=true&w=majority&appName=Formulario";
+const uri = "mongodb+srv://admin:j4bAB3JN3LBTWJsJ@formulario.ebd59ch.mongodb.net/?retryWrites=true&w=majority&appName=Formulario&tls=true";
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -144,8 +144,8 @@ app.post('/enviar-formulario', async (req, res) => {
             });
     
 
-        const authorizationLink = `http://localhost:${port}/autorizar-formulario/${uniqueToken}`;
-        const noAuthorizationLink = `http://localhost:${port}/no-autorizar-formulario/${uniqueToken}`;
+        const authorizationLink = `https://formulariov4.onrender.com/autorizar-formulario/${uniqueToken}`;
+        const noAuthorizationLink = `https://formulariov4.onrender.com/no-autorizar-formulario/${uniqueToken}`;
         const htmlEmailContent = `
       <!DOCTYPE html>
       <html lang="es">
