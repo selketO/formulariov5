@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Función para generar un nuevo folio
   const generateFolio = async () => {
     // Aquí se supone que tienes una colección 'settings' donde guardas el último folio usado.
-    const folioDoc = await db.collection('settingsss').doc('folio').get();
+    const folioDoc = await db.collection('settings').doc('folio').get();
     const folioData = folioDoc.data();
     const newFolio = (folioData.currentFolio || 0) + 1;
     
