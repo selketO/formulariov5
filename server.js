@@ -13,6 +13,23 @@ app.use(express.json()); // para parsing application/json
 app.use(express.static('public'));
 const serviceAccount = require('./formulario-if---ft-firebase-adminsdk-u9bim-fd525dbea7.json');
 const { v4: uuidv4 } = require('uuid');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const uri = "mongodb+srv://admin:j4bAB3JN3LBTWJsJ@formulario.ebd59ch.mongodb.net/?retryWrites=true&w=majority&appName=Formulario";
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+let bd;
+
+client.connect()
+  .then(() => {
+    console.log("Connected successfully to MongoDB");
+    bd = client.db("Formulario"); // Reemplaza "nombreDeTuBaseDeDatos" con el nombre real de tu base de datos
+  })
+  .catch(err => console.error('Failed to connect to MongoDB', err));
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -26,11 +43,9 @@ app.get('/', (req, res) => {
 app.post('/enviar-formulario', async (req, res) => {
     const { firma, correo, correoAplicant, Mount, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
 
-    // Crear un documento PDF
+    // Crear un documento PDF en memoria
     const doc = new PDFDocument();
-    const pdfPath = `firma-${Date.now()}.pdf`;
-    const stream = fs.createWriteStream(pdfPath);
-
+    const pdfBuffers = [];
     // Define constants for layout
     const margin = 50;
     const pageWidth = doc.page.width - 2 * margin;
@@ -98,23 +113,39 @@ app.post('/enviar-formulario', async (req, res) => {
     // Add extra space for the last field before signatures
     yPos += lineHeight * 2;
 
-    doc.pipe(stream);
+
     // Aquí agregarías el contenido a tu PDF, como se hizo anteriormente
     doc.fontSize(25).text('', 100, 80);
-    doc.end();
 
-    // Esperar a que el PDF se haya generado completamente
-    stream.on('finish', async () => {
+    doc.on('data', chunk => pdfBuffers.push(chunk));
+    doc.on('end', async () => {
+        const pdfBuffer = Buffer.concat(pdfBuffers);
 
+        try {
+            const result = await bd.collection('pdfs').insertOne({
+                createdAt: new Date(),
+                pdfData: pdfBuffer
+            });
+            const pdfId = result.insertedId;
 
-        const formData = { ...req.body, pdfPath };
-        const uniqueToken = uuidv4();
+            const formData = { ...req.body, pdfId: pdfId.toString() };
+            const uniqueToken = uuidv4();
 
-        // Guarda los datos del formulario con el token en Firestore
-        await db.collection('devsolicitudesPendientes').doc(uniqueToken).set(formData);
+            // Guarda los datos del formulario con el token en Firestore
+            await db.collection('devsolicitudesPendientes').doc(uniqueToken).set(formData);
+            let transporter = nodemailer.createTransport({
+                host: process.env.EMAIL_HOST,
+                port: parseInt(process.env.EMAIL_PORT, 10),
+                secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS,
+                },
+            });
+    
 
-        const authorizationLink = `https://formulariov3.onrender.com/autorizar-formulario/${uniqueToken}`;
-        const noAuthorizationLink = `https://formulariov3.onrender.com/no-autorizar-formulario/${uniqueToken}`;
+        const authorizationLink = `http://localhost:${port}/autorizar-formulario/${uniqueToken}`;
+        const noAuthorizationLink = `http://localhost:${port}/no-autorizar-formulario/${uniqueToken}`;
         const htmlEmailContent = `
       <!DOCTYPE html>
       <html lang="es">
@@ -181,10 +212,31 @@ app.post('/enviar-formulario', async (req, res) => {
                   <p>Por favor, autorice el gasto de <strong>${formData.productService}</strong>, por un monto de <strong>${formData.expenseAmount}</strong> correspondiente a la partida presupuestal <strong>${formData.budgetItem}</strong>. Encuentra los detalles adjuntos. Gracias.</p>
                   <p>Saludos cordiales,<br>${formData.applicant}</p>
               </div>
-              <div class="button-container">
-                  <a href="${authorizationLink}" class="button authorize">Autorizar</a>
-                  <a href="${noAuthorizationLink}" class="button decline">No Autorizar</a>
-              </div>
+              <table width="100%" cellspacing="0" cellpadding="0">
+              <tr>
+                <td>
+                  <table cellspacing="0" cellpadding="0" align="left">
+                    <tr>
+                      <td align="center" width="200" height="40" bgcolor="#28a745" style="border-radius: 5px;">
+                        <a href="${authorizationLink}" target="_blank" style="font-size: 16px; font-family: sans-serif; color: #ffffff; text-decoration: none; line-height:40px; display: inline-block;">
+                          Autorizar
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+            
+                  <table cellspacing="0" cellpadding="0" align="right">
+                    <tr>
+                      <td align="center" width="200" height="40" bgcolor="#dc3545" style="border-radius: 5px;">
+                        <a href="${noAuthorizationLink}" target="_blank" style="font-size: 16px; font-family: sans-serif; color: #ffffff; text-decoration: none; line-height:40px; display: inline-block;">
+                          No Autorizar
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
               <div class="footer">
                   <p>Este es un mensaje automático, por favor no responder directamente.</p>
               </div>
@@ -194,15 +246,6 @@ app.post('/enviar-formulario', async (req, res) => {
       `;
 
 
-        let transporter = nodemailer.createTransport({
-            host: process.env.EMAIL_HOST,
-            port: parseInt(process.env.EMAIL_PORT, 10),
-            secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
 
         transporter.sendMail({
             from: process.env.EMAIL_FROM, // Agrega tu dirección de correo "From"
@@ -212,7 +255,7 @@ app.post('/enviar-formulario', async (req, res) => {
             attachments: [
                 {
                     filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
-                    path: pdfPath, // Ruta al archivo PDF
+                    content: pdfBuffer, // Ruta al archivo PDF
                     contentType: 'application/pdf'
                 },
                 {
@@ -222,12 +265,22 @@ app.post('/enviar-formulario', async (req, res) => {
                 }
             ]
         }).then(info => {
-            res.send('Formulario enviado y correo de autorización enviado.');
+            console.log('Correo enviado:', info.response);
+            res.send('Correo de autorización enviado con éxito.');
         }).catch(error => {
             console.error('Error al enviar correo de autorización:', error);
             res.status(500).send('Error al enviar correo de autorización.');
         });
-    });
+
+    } catch (error) {
+        console.error('Error al guardar el PDF en MongoDB:', error);
+        res.status(500).send('Error al guardar el PDF en MongoDB.');
+    }
+});
+
+// ... Generación del contenido del PDF
+// No olvides eliminar cualquier referencia a pdfPath y stream, ya que ya no son necesarios
+doc.end();
 });
 //--------------------------------------------------------------------------------------------------------Auutorizar-------------------------------------------------------------------------------------------
 app.get('/autorizar-formulario/:token', async (req, res) => {
@@ -241,12 +294,12 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
 
     const formData = doc.data();
 
-    // No es necesario convertir a ruta absoluta si ya guardaste una ruta absoluta
-    const pdfPath = formData.pdfPath; // Asegúrate de que este campo exista
-    console.log('PDF path:', pdfPath);
-
-    if (!fs.existsSync(pdfPath)) {
-        return res.status(500).send('El archivo PDF no existe.');
+    const pdfId = formData.pdfId;
+    const pdfDocument = await bd.collection('pdfs').findOne({ _id: new ObjectId(pdfId) });
+    
+    if (!pdfDocument) {
+        console.error('PDF no encontrado en MongoDB');
+        return res.status(404).send('PDF no encontrado.');
     }
     await db.collection('devformulariosAutorizados').doc(token).set(formData);
     await docRef.delete();
@@ -270,7 +323,7 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
         attachments: [
             {
                 filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
-                path: pdfPath, // Ruta al archivo PDF
+                content: pdfDocument.pdfData.buffer, // Ruta al archivo PDF
                 contentType: 'application/pdf'
             }
         ]

@@ -809,9 +809,15 @@ const addProvidersToSelect = (providers) => {
 
   // Inicializar Select2 en tu elemento select de proveedores
   $('#provider').select2({
-    placeholder: "Selecciona un proveedor",
-    allowClear: true
-  });
+    placeholder: "Selecciona o escribe un proveedor",
+    allowClear: true,
+    tags: true, // Permite la creación de nuevas opciones
+    insertTag: function (data, tag) {
+        // Insert the tag at the end of the results
+        data.push(tag);
+    }
+});
+
 
   const selectedApplicants = [
     { name: 'Fernando Vargas', email: 'fvargas@biancorelab.com' },

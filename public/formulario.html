@@ -76,11 +76,11 @@
             </div>
             <div class="col-50">
                 <label for="expenseAmount" class="field-label">Monto de Gasto Unitario (Pesos / sin iva):</label>
-                <input type="number" class="field-input" id="expenseAmount" name="expenseAmount">
+                <input type="number" class="field-input" id="expenseAmount" name="expenseAmount" step="0.01">
             </div>
             <div class="col-25">
                 <label for="Mount" class="field-label">Monto total:</label>
-                <input type="text" class="field-input fake-label-input" id="Mount" name="Mount" value="" readonly>
+                <input type="text" class="field-input fake-label-input" id="Mount" name="Mount" value="" >
             </div>
         </div>
       
@@ -148,7 +148,6 @@
     <script src="/js/form-logic.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@2.3.2/dist/signature_pad.min.js"></script>
     <script>    
-
         var canvas = document.getElementById('firma');
         var signaturePad = new SignaturePad(canvas);
         document.getElementById('quantity').addEventListener('input', updateTotalAmount);
@@ -172,6 +171,7 @@
             var productService = document.getElementById('productService').value;
             var quantity = document.getElementById('quantity').value;
             var expenseAmount = document.getElementById('expenseAmount').value;
+            var Mount = document.getElementById('Mount').value;
             var provider = document.getElementById('provider').value;
             var budgetItem = document.getElementById('budgetItem').value;
             var paymentForm = document.getElementById('paymentForm').value;
