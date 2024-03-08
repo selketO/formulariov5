@@ -945,6 +945,7 @@ const addProvidersToSelect = (providers) => {
         "Gastos Financieros (Factoraje)": "luis@biancorelab.com",
         "Tarjeta de Credito American Express": "luis@biancorelab.com",
         "Utilidad o Perdida Cambiaria": "cloera@biancorelab.com",
+        "dev": "edelgado@biancorelab.com",
       },
       'I + D': {
         "Analisis microbiologicos": "carlos@biancorelab.com",
