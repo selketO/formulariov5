@@ -829,12 +829,12 @@ const addProvidersToSelect = (providers) => {
     { name: 'Alondra González', email: 'agonzalez@biancorelab.com' },
     { name: 'Carlos Ancona', email: 'carlos@biancorelab.com' },
     { name: 'Eliud Cortes', email: 'ecortes@biancorelab.com' },
-    { name: 'Isabel Hérnandez', email: 'no disponible' },
+    { name: 'Isabel Hérnandez', email: 'ihernandez@biancorelab.com' },
     { name: 'Luis Ceballos', email: 'luis@biancorelab.com' }
 ];
   const areaToBudgetItems = {
     'Comercial': {
-      "Licencia de Xtract (Ventas)": "edelgado@biancorelab.com",
+      "Licencia de Xtract (Ventas)": "francisco@biancorelab.com",
       "Asociacion de Nacional de Tiendas y Autoservicios departamentales": "carlos@biancorelab.com",
       "Asociación Mexicana de Estándares para el Comercio Electrónico, Asociación Civil": "carlos@biancorelab.com",
       "Regalos a clientes": "francisco@biancorelab.com",
