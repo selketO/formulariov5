@@ -960,8 +960,8 @@ const addProvidersToSelect = (providers) => {
         "Hosting Web": "carlos@biancorelab.com",
         "Dominio - biancorelab.com": "carlos@biancorelab.com",
         "Dominio - safty.com.mx": "carlos@biancorelab.com",
-        "Viaticos i+d": "luis@biancorelab.com",
-        "Dominio - safty.mx": "luis@biancorelab.com",
+        "Viaticos i+d": "carlos@biancorelab.com",
+        "Dominio - safty.mx": "carlos@biancorelab.com",
         "Dominio - safty.mx (página web)": "carlos@biancorelab.com",
         },
         'Mkt': {
