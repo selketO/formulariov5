@@ -882,6 +882,7 @@ const addProvidersToSelect = (providers) => {
         "Asesoria y admon office 365": "luis@biancorelab.com",
         "Asesoria Comité de Finanzas": "luis@biancorelab.com",
         "Asesoria Legal (RRS, Abogados)": "carlos@biancorelab.com",
+        "Asesoria Legal": "luis@biancorelab.com",
         "Asesoria Contable y Fiscal": "cloera@biancorelab.com",
         "Luz": "cloera@biancorelab.com",
         "Telefonia y Comunicaciones (Internet)": "cloera@biancorelab.com",
