@@ -144,8 +144,8 @@ app.post('/enviar-formulario', async (req, res) => {
             });
     
 
-        const authorizationLink = `https://formulariov2.onrender.com/autorizar-formulario/${uniqueToken}`;
-        const noAuthorizationLink = `https://formulariov2.onrender.com/no-autorizar-formulario/${uniqueToken}`;
+            const authorizationLink = `http://localhost:${port}/autorizar-formulario/${uniqueToken}`;
+            const noAuthorizationLink = `http://localhost:${port}/no-autorizar-formulario/${uniqueToken}`;
         const htmlEmailContent = `
       <!DOCTYPE html>
       <html lang="es">
@@ -244,9 +244,45 @@ app.post('/enviar-formulario', async (req, res) => {
       </body>
       </html>
       `;
+      const cancelLink = `http://localhost:${port}/cancelar-formulario/${uniqueToken}`;
+      const htmlEmailContentCancel = `
+          <!DOCTYPE html>
+          <html lang="es">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+                  .email-container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+                  .button { padding: 10px 20px; color: white; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; background-color: #dc3545; }
+              </style>
+          </head>
+          <body>
+              <div class="email-container">
+                  <p>Hola ${applicant},</p>
+                  <p>Has enviado una solicitud con el siguiente detalle:</p>
+                  <p><strong>Producto o Servicio:</strong> ${productService}</p>
+                  <p><strong>Monto Total:</strong> ${Mount}</p>
+                  <p><strong>Descripción:</strong> ${description}</p>
+                  <p>Si necesitas cancelar esta solicitud, por favor haz clic en el siguiente botón:</p>
+                  <a href="${cancelLink}" class="button">Cancelar Solicitud</a>
+              </div>
+          </body>
+          </html>
+      `;
 
-
-
+      transporter.sendMail({
+          from: process.env.EMAIL_FROM, // Tu dirección de correo "From"
+          to: correoAplicant, // Correo del solicitante
+          subject: 'Detalles de tu solicitud de formulario',
+          html: htmlEmailContentCancel
+      }).then(info => {
+          console.log('Correo enviado:', info.response);
+          res.send('Detalles de la solicitud enviados con éxito al solicitante.');
+      }).catch(error => {
+          console.error('Error al enviar correo:', error);
+          res.status(500).send('Error al enviar correo al solicitante.');
+      });
         transporter.sendMail({
             from: process.env.EMAIL_FROM, // Agrega tu dirección de correo "From"
             to: formData.correo, // Suponiendo que `correo` es el correo del autorizador
@@ -293,17 +329,22 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
     }
 
     const formData = doc.data();
-
     const pdfId = formData.pdfId;
     const pdfDocument = await bd.collection('pdfs').findOne({ _id: new ObjectId(pdfId) });
-    
+
     if (!pdfDocument) {
         console.error('PDF no encontrado en MongoDB');
         return res.status(404).send('PDF no encontrado.');
     }
-    await db.collection('formulariosAutorizados').doc(token).set(formData);
-    await docRef.delete();
 
+    const mountValue = parseFloat(formData.Mount);
+    if (isNaN(mountValue)) {
+        console.error('Mount no es un número válido');
+        return res.status(400).send('Mount proporcionado no es un número válido.');
+    }
+
+    const rubroDocument = await bd.collection('rubros').findOne({ Concepto: formData.budgetItem });
+    // Configurar el transporte para el envío de correos
     let transporter = nodemailer.createTransport({
         host: process.env.EMAIL_HOST,
         port: parseInt(process.env.EMAIL_PORT, 10),
@@ -313,41 +354,83 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
             pass: process.env.EMAIL_PASS,
         },
     });
-    console.log('Correo destinatario:', formData.correoAplicant);
+    if (rubroDocument) {
+        if (rubroDocument.Acumulado < mountValue) {
+            console.error('El monto solicitado excede el Acumulado. el monto solicitado fue de ' + mountValue + ', y el saldo disponible es de ' + rubroDocument.Acumulado);
+            await sendEmail(
+                transporter,
+                formData.correoAplicant,
+                'Autorización denegada',
+                'El monto solicitado excede el acumulado disponible. No se puede proceder con la autorización.'
+            );
+            return res.status(400).send('El monto solicitado de ' + mountValue + ' excede el acumulado disponible de ' + rubroDocument.Acumulado);
+        }
+        const newAcumulado = rubroDocument.Acumulado - mountValue;
+        const updateResult = await bd.collection('rubros').updateOne(
+            { Concepto: formData.budgetItem },
+            { $set: { Acumulado: newAcumulado } }
+        );
 
-    transporter.sendMail({
-        from: process.env.EMAIL_FROM,
-        to: `${formData.correoAplicant}, cobranza@biancorelab.com`, // Define el destinatario directamente para pruebas
-        subject: 'Tu formulario ha sido autorizado',
-        text: 'Nos complace informarte que tu formulario ha sido autorizado.',
-        attachments: [
-            {
-                filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
-                content: pdfDocument.pdfData.buffer, // Ruta al archivo PDF
-                contentType: 'application/pdf'
-            }
-        ]
-    }).then(info => {
-        console.log('Correo de confirmación enviado: ', info);
-        res.send(`
-    <html>
-        <body>
-            <p>La acción ha sido procesada. Esta ventana se cerrará automáticamente.</p>
-            <script>
-                window.onload = function() {
-                    setTimeout(function() {
-                        window.close();
-                    }, 1500); // Espera 3 segundos antes de intentar cerrar
-                };
-            </script>
-        </body>
-    </html>
-`);
-    }).catch(error => {
-        console.error('Error al enviar correo de confirmación:', error);
-        res.status(500).send('Error al enviar correo de confirmación.');
-    });
+        console.log('Acumulado actualizado correctamente en rubro.');
+    } else {
+        console.log('Rubro con el concepto proporcionado no encontrado.');
+        return res.status(404).send('Rubro con el concepto proporcionado no encontrado.');
+    }
+
+    // Autorizar el formulario y eliminar de solicitudes pendientes
+    await db.collection('formulariosAutorizados').doc(token).set(formData);
+    await docRef.delete();
+
+    // Enviar correo de confirmación
+    await sendEmail(
+        transporter,
+        `${formData.correoAplicant}, cobranza@biancorelab.com`,
+        'Tu formulario ha sido autorizado',
+        'Nos complace informarte que tu formulario ha sido autorizado.',
+        pdfDocument.pdfData.buffer
+    );
+
+    res.send(`
+        <html>
+            <body>
+                <p>La acción ha sido procesada. Esta ventana se cerrará automáticamente.</p>
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.close();
+                        }, 4500);
+                    };
+                </script>
+            </body>
+        </html>
+    `);
 });
+
+// Función auxiliar para enviar correos electrónicos
+async function sendEmail(transporter, recipient, subject, message, attachment = null) {
+    const mailOptions = {
+        from: process.env.EMAIL_FROM,
+        to: recipient,
+        subject: subject,
+        text: message
+    };
+
+    if (attachment) {
+        mailOptions.attachments = [{
+            filename: 'Formulario-Autorizado.pdf',
+            content: attachment,
+            contentType: 'application/pdf'
+        }];
+    }
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Correo enviado: ', info);
+    } catch (error) {
+        console.error('Error al enviar correo:', error);
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------No autorizar-------------------------------------------------------------------------------------------
 app.get('/no-autorizar-formulario/:token', async (req, res) => {
     const { token } = req.params;
@@ -401,8 +484,369 @@ app.get('/no-autorizar-formulario/:token', async (req, res) => {
         res.status(500).send('Error al enviar correo de no autorización.');
     });
 });
+app.post('/api/transferencia', async (req, res) => {
+    const session = await client.startSession();
+    try {
+      session.startTransaction();
+      const { origen, destino, applicant } = req.body;
+      const cantidad = parseFloat(req.body.cantidad);
+  
+      if (isNaN(cantidad) || cantidad <= 0) {
+        throw new Error('La cantidad debe ser un número positivo');
+      }
+  
+      const origenDoc = await client.db("Formulario").collection('rubros').findOne({ _id: new ObjectId(origen) });
+      const destinoDoc = await client.db("Formulario").collection('rubros').findOne({ _id: new ObjectId(destino) });
+  
+      if (!origenDoc || typeof origenDoc.Acumulado !== 'number' || origenDoc.Acumulado < cantidad) {
+        throw new Error('Fondos insuficientes o rubro origen no válido');
+      }
+      if (!destinoDoc || typeof destinoDoc.Acumulado !== 'number') {
+        throw new Error('Rubro destino no válido');
+      }
+  
+      // Generar un token único para la solicitud de transferencia
+      const token = uuidv4();
+  
+      // Guardar la solicitud en la base de datos con el token
+      await client.db("Formulario").collection('solicitudesTransferencia').insertOne({
+        token,
+        origen,
+        destino,
+        cantidad,
+        applicant,
+        autorizado: false
+      });
+  
+      // Obtener los nombres de los rubros
+      const origenNombre = origenDoc.Concepto;
+      const destinoNombre = destinoDoc.Concepto;
+  
+      // Enviar correo electrónico con botones para autorizar o cancelar
+      const autorizarLink = `http://localhost:${port}/autorizar-transferencia/${token}`;
+      const cancelarLink = `http://localhost:${port}/cancelar-transferencia/${token}`;
+  
+      const htmlEmailContent = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Solicitud de Autorización de Transferencia</title>
+            <style>
+                /* Estilos CSS para el correo electrónico */
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Solicitud de Autorización de Transferencia</h1>
+                <p>Se ha solicitado una transferencia de fondos desde el rubro <strong>${origenNombre}</strong> al rubro <strong>${destinoNombre}</strong> por un monto de <strong>${cantidad}</strong>.</p>
+                <p>Por favor, autoriza o cancela esta solicitud.</p>
+                <div class="button-container">
+                    <a href="${autorizarLink}" class="button button-autorizar">Autorizar</a>
+                    <a href="${cancelarLink}" class="button button-cancelar">Cancelar</a>
+                </div>
+            </div>
+        </body>
+        </html>
+      `;
+  
+      // Enviar el correo electrónico a edelgado@biancorelab.com
+      const transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT, 10),
+        secure: process.env.EMAIL_SECURE === 'true',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+  
+      const mailOptions = {
+        from: 'edelgado@biancorelab.com',
+        to: 'edelgado@biancorelab.com',
+        subject: 'Solicitud de Autorización de Transferencia',
+        html: htmlEmailContent
+      };
+  
+      await transporter.sendMail(mailOptions);
+  
+      res.json({ message: 'Solicitud de transferencia enviada. Por favor, revise su correo electrónico.' });
+    } catch (error) {
+      await session.abortTransaction();
+      console.error('Error durante la transacción:', error);
+      res.status(500).json({ message: 'Error durante la transferencia', error: error.message });
+    } finally {
+      session.endSession();
+    }
+  });
+
+  app.get('/autorizar-transferencia/:token', async (req, res) => {
+    const { token } = req.params;
+
+    // Buscar la solicitud de transferencia en la base de datos
+    const solicitud = await client.db("Formulario").collection('solicitudesTransferencia').findOne({ token });
+
+    if (!solicitud) {
+        return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+
+    if (solicitud.autorizado) {
+        return res.status(400).json({ error: 'La solicitud ya ha sido autorizada' });
+    }
+
+    // Realizar la transferencia
+    const session = await client.startSession();
+    try {
+        session.startTransaction();
+
+        // Actualizar los saldos de los rubros
+        const updateOrigen = await client.db("Formulario").collection('rubros').findOneAndUpdate(
+            { _id: new ObjectId(solicitud.origen) },
+            { $inc: { Acumulado: -solicitud.cantidad } },
+            { session }
+        );
+        const updateDestino = await client.db("Formulario").collection('rubros').findOneAndUpdate(
+            { _id: new ObjectId(solicitud.destino) },
+            { $inc: { Acumulado: solicitud.cantidad } },
+            { session }
+        );
+
+        const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT, 10),
+            secure: process.env.EMAIL_SECURE === 'true',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        // Enviar correo electrónico al solicitante notificando la autorización
+        await sendEmail(
+            transporter,
+            solicitud.applicant,
+            'Autorización de Transferencia',
+            `Su solicitud de transferencia ha sido autorizada.`
+        );
+
+        await session.commitTransaction(); // Confirmar la transacción después de enviar el correo electrónico
+
+        // Actualizar el estado de la solicitud para marcarla como autorizada
+        await client.db("Formulario").collection('solicitudesTransferencia').updateOne({ token }, { $set: { autorizado: true } });
+
+        res.json({ message: 'Transferencia completada con éxito' });
+    } catch (error) {
+        await session.abortTransaction();
+        console.error('Error durante la transacción:', error);
+        res.status(500).json({ message: 'Error durante la transferencia', error: error.message });
+    } finally {
+        session.endSession();
+    }
+});
+
+app.get('/cancelar-transferencia/:token', async (req, res) => {
+    const { token } = req.params;
+
+    // Buscar la solicitud de transferencia en la base de datos
+    const solicitud = await client.db("Formulario").collection('solicitudesTransferencia').findOne({ token });
+
+    if (!solicitud) {
+        return res.status(404).json({ error: 'Solicitud no encontrada' });
+    }
+
+    if (solicitud.autorizado) {
+        return res.status(400).json({ error: 'La solicitud ya ha sido autorizada' });
+    }
+
+    // Eliminar la solicitud de la base de datos
+    await client.db("Formulario").collection('solicitudesTransferencia').deleteOne({ token });
+
+    const transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: parseInt(process.env.EMAIL_PORT, 10),
+        secure: process.env.EMAIL_SECURE === 'true',
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+
+    // Enviar correo electrónico al solicitante notificando la cancelación
+    await sendEmail(
+        transporter,
+        solicitud.applicant,
+        'Cancelación de Transferencia',
+        `Su solicitud de transferencia ha sido cancelada.`
+    );
+
+    res.json({ message: 'Solicitud de transferencia cancelada' });
+});
+;
+
+  
+app.get('/cancelar-formulario/:token', async (req, res) => {
+    const { token } = req.params;
+
+    // Verificar si la solicitud está en la colección de autorizados
+    let docRef = db.collection('formulariosAutorizados').doc(token);
+    let doc = await docRef.get();
+    let authorized = true;
+
+    if (!doc.exists) {
+        // Si no está en autorizados, buscar en pendientes
+        docRef = db.collection('solicitudesPendientes').doc(token);
+        doc = await docRef.get();
+        authorized = false;
+
+        if (!doc.exists) {
+            return res.status(404).send('La solicitud no existe o ya fue procesada.');
+        }
+    }
+
+    const formData = doc.data();
+
+    if (authorized) {
+        // Si la solicitud fue autorizada y ahora se desea cancelar
+        // Enviar correo al autorizador para confirmar la cancelación
+        let transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT, 10),
+            secure: process.env.EMAIL_SECURE === 'true',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        const confirmCancelLink = `http://localhost:${port}/confirmar-cancelacion/${token}`;
+        const rejectCancelLink = `http://localhost:${port}/rechazar-cancelacion/${token}`;
+
+        const htmlEmailContent = `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+                    .email-container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+                    .button { padding: 10px 20px; color: white; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; background-color: #28a745; }
+                    .button-danger { background-color: #dc3545; }
+                </style>
+            </head>
+            <body>
+                <div class="email-container">
+                    <p>Hola,</p>
+                    <p>Se ha solicitado la cancelación del formulario con folio ${formData.folio}. Por favor, confirme o rechace esta solicitud.</p>
+                    <a href="${confirmCancelLink}" class="button">Confirmar Cancelación</a>
+                    <a href="${rejectCancelLink}" class="button button-danger">Rechazar Cancelación</a>
+                </div>
+            </body>
+            </html>
+        `;
+
+        await transporter.sendMail({
+            from: process.env.EMAIL_FROM,
+            to: formData.correo, // Correo del autorizador
+            subject: 'Confirmación de Cancelación de Formulario',
+            html: htmlEmailContent
+        });
+
+        res.send('Correo de confirmación de cancelación enviado al autorizador.');
+    } else {
+        // Si la solicitud está pendiente simplemente eliminar
+        await docRef.delete();
+        res.send('La solicitud no autorizada ha sido cancelada exitosamente.');
+    }
+});
+
+app.get('/confirmar-cancelacion/:token', async (req, res) => {
+    const { token } = req.params;
+    const docRef = db.collection('formulariosAutorizados').doc(token);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+        return res.status(404).send('La solicitud no existe o ya fue procesada.');
+    }
+
+    const formData = doc.data();
+    // Revertir la autorización aquí (e.g., restaurar saldos o inventarios)
+
+    await docRef.delete(); // Eliminar o mover el documento a una colección de cancelados
+
+        // Envía un correo al autorizador y al solicitante notificando la cancelación
+        await sendEmail(
+            transporter,
+            `${formData.correoAplicant}, cobranza@biancorelab.com`,
+            'Reversión de Autorización',
+            `La autorización del formulario con folio ${formData.folio} ha sido revertida y los fondos han sido restaurados.`
+        );
+
+    res.send('La cancelación ha sido confirmada y procesada correctamente.');
+});
+
+// Ruta para rechazar la cancelación del formulario
+app.get('/rechazar-cancelacion/:token', async (req, res) => {
+    const { token } = req.params;
+    res.send('La cancelación ha sido rechazada.');
+});
+app.get('/api/rubros', async (req, res) => {
+    try {
+        const rubros = await bd.collection('rubros').find({}).toArray();
+        res.json(rubros);
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener los rubros' });
+    }
+});
+app.get('/api/saldos', async (req, res) => {
+    try {
+        const origen = await bd.collection('rubros').findOne({ _id: new ObjectId(req.query.origen) });
+        const destino = await bd.collection('rubros').findOne({ _id: new ObjectId(req.query.destino) });
+
+        
+        if (!origen || !destino) {
+            // Si alguno de los documentos no se encuentra, devuelve un 404.
+            return res.status(404).json({ message: 'Rubro no encontrado' });
+        }
+        
+        // Si todo está bien, devuelve los saldos.
+        res.json({
+            origen: { Acumulado: origen.Acumulado },
+            destino: { Acumulado: destino.Acumulado }
+        });
+    } catch (error) {
+        // Si hay un error en la consulta, captúralo y devuelve un 500.
+        console.error('Error al obtener los saldos', error);
+        res.status(500).json({ message: 'Error al obtener los saldos', error: error.message });
+    }
+});
 
 
+
+app.get('/api/report-data', async (req, res) => {
+    try {
+      const rubrosActual = await bd.collection('rubros').find({}).toArray();
+      const rubrosBudgeted = await bd.collection('rubrosCompleto').find({}).toArray();
+  
+      let reportData = rubrosBudgeted.map(budgeted => {
+        let actual = rubrosActual.find(a => a.Concepto === budgeted.Concepto);
+        return {
+          Concepto: budgeted.Concepto,
+          Area: budgeted.Area || 'General',
+          Presupuesto: budgeted.Acumulado,
+          Real: actual ? actual.Acumulado : 0,
+          Diferencia: actual ? actual.Acumulado - budgeted.Acumulado : -budgeted.Acumulado
+        };
+      });
+  
+      res.json(reportData);
+    } catch (error) {
+      console.error('Error al obtener los datos del reporte:', error);
+      res.status(500).json({ message: 'Error al obtener los datos del reporte' });
+    }
+  });
+  
 app.listen(port, () => {
     console.log(`Servidor ejecutándose en http://localhost:${port}`);
 });

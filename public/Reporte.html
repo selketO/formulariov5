@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte de Rubros</title>
+  <style>
+    /* Estilos generales */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8f8f8;
+      color: #333;
+    }
+
+    /* Estilos para el encabezado */
+    h1 {
+      text-align: center;
+      padding: 20px 0;
+      background-color: #182857;
+      color: #fff;
+      margin-bottom: 30px;
+    }
+
+    /* Estilos para la tabla */
+    table {
+      width: 95%;
+      max-width: 1200px;
+      margin: 0 auto;
+      border-collapse: collapse;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      background-color: #fff;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #182857;
+      color: #fff;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    /* Estilos para el filtro */
+    #areaFilter {
+      display: block;
+      width: 200px;
+      margin: 0 auto 20px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    /* Estilos para las celdas de diferencia */
+    .green {
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .red {
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    /* Estilos para hacer la tabla responsive */
+    @media (max-width: 768px) {
+      table {
+        width: 100%;
+      }
+
+      th, td {
+        padding: 8px;
+      }
+    }
+    .areaFilter {
+  display: block;
+  width: 200px;
+  margin: 0 auto 0px;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 16px;
+  text-align: center; /* Alineación al centro */
+}
+  </style>
+</head>
+<body>
+  <h1>Reporte de Rubros</h1>
+  <label class="areaFilter" for="areaFilter">Filtrar por área:</label>
+  <select id="areaFilter">
+    <option value="">Todas</option>
+    <!-- Las opciones se llenarán con JavaScript -->
+  </select>
+  <table id="reportTable">
+    <thead>
+      <tr>
+        <th>Concepto</th>
+        <th>Área</th>
+        <th>Presupuesto</th>
+        <th>Real</th>
+        <th>Diferencia $</th>
+        <th>Diferencia %</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Los datos de la tabla se llenarán con JavaScript -->
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="2">Total</th>
+        <th id="totalPresupuesto"></th>
+        <th id="totalReal"></th>
+        <th id="totalDiferencia"></th>
+        <th id="totalDiferenciaPorcentaje"></th>
+      </tr>
+    </tfoot>
+  </table>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch('/api/report-data')
+        .then(response => response.json())
+        .then(data => {
+          const tableBody = document.getElementById('reportTable').getElementsByTagName('tbody')[0];
+          const areaFilter = document.getElementById('areaFilter');
+          // Organizar los datos por área
+          data.sort((a, b) => a.Area.localeCompare(b.Area));
+          // Llenar las opciones del filtro con las áreas
+          let areas = [...new Set(data.map(item => item.Area))];
+          areas.forEach(area => {
+            let option = document.createElement('option');
+            option.value = area;
+            option.textContent = area;
+            areaFilter.appendChild(option);
+          });
+          // Función para llenar la tabla con los datos filtrados
+          function fillTable() {
+            tableBody.innerHTML = '';
+            let totalPresupuesto = 0;
+            let totalReal = 0;
+            let totalDiferencia = 0;
+            data.filter(item => !areaFilter.value || item.Area === areaFilter.value)
+              .forEach(item => {
+                let row = tableBody.insertRow();
+                row.insertCell(0).textContent = item.Concepto;
+                row.insertCell(1).textContent = item.Area;
+                let presupuesto = parseFloat(item.Presupuesto);
+                let real = parseFloat(item.Real);
+                totalPresupuesto += presupuesto;
+                totalReal += real;
+                let diff = real - presupuesto;
+                totalDiferencia += diff;
+                row.insertCell(2).textContent = presupuesto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+                row.insertCell(3).textContent = real.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+                // Calcular la diferencia en monto y porcentaje
+                let diffPercent = (diff / presupuesto) * 100;
+                // Agregar las celdas de diferencia en monto y porcentaje
+                let diffCell = row.insertCell(4);
+                diffCell.textContent = diff.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+                diffCell.className = diff <= 0 ? 'green' : 'red';
+                let diffPercentCell = row.insertCell(5);
+                diffPercentCell.textContent = diffPercent.toFixed(2) + '%';
+                diffPercentCell.className = diffPercent <= 0 ? 'green' : 'red';
+              });
+            // Mostrar los totales
+            document.getElementById('totalPresupuesto').textContent = totalPresupuesto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+            document.getElementById('totalReal').textContent = totalReal.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+            document.getElementById('totalDiferencia').textContent = totalDiferencia.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+            let totalDiferenciaPorcentaje = (totalDiferencia / totalPresupuesto) * 100;
+            document.getElementById('totalDiferenciaPorcentaje').textContent = totalDiferenciaPorcentaje.toFixed(2) + '%';
+          }
+          // Llenar la tabla inicialmente
+          fillTable();
+          // Actualizar la tabla cuando se cambia el filtro
+          areaFilter.addEventListener('change', fillTable);
+        })
+        .catch(error => console.error('Error:', error));
+    });
+  </script>
+</body>
+</html>

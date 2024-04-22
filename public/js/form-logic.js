@@ -822,7 +822,7 @@ const addProvidersToSelect = (providers) => {
   const selectedApplicants = [
     { name: 'Fernando Vargas', email: 'fvargas@biancorelab.com' },
     { name: 'Francisco Macias', email: 'francisco@biancorelab.com' },
-    // { name: 'Edhson Delgado', email: 'edelgado@biancorelab.com' },
+    { name: 'Edhson Delgado', email: 'edelgado@biancorelab.com' },
     { name: 'Teresa Hermosillo', email: 'tgallo@biancorelab.com' },
     { name: 'Valeria González', email: 'cobranza@biancorelab.com' },
     { name: 'Christian Loera', email: 'cloera@biancorelab.com' },
@@ -835,7 +835,7 @@ const addProvidersToSelect = (providers) => {
 ];
   const areaToBudgetItems = {
 'Comercial': {
-      "Licencia de Xtract (Ventas)": "francisco@biancorelab.com",
+      "Licencia de Xtract (Ventas)": "edelgado@biancorelab.com",
       "Asociacion de Nacional de Tiendas y Autoservicios departamentales": "carlos@biancorelab.com",
       "Asociación Mexicana de Estándares para el Comercio Electrónico, Asociación Civil": "carlos@biancorelab.com",
       "Regalos a clientes": "francisco@biancorelab.com",
@@ -909,7 +909,7 @@ const addProvidersToSelect = (providers) => {
         "Mtto de Equipo de Transporte (Mariana)": "cloera@biancorelab.com",
         "Mantenimiento Fijo Torre Ganesh": "cloera@biancorelab.com",
         "Mantenimiento Extemporaneo": "cloera@biancorelab.com",
-        "Einar Zavala Flores": "luis@biancorelab.com",
+        "Einar Zavala Flores": "cloera@biancorelab.com",
         "Mto de Equipo de Computo": "luis@biancorelab.com",
         "SW Sapien (Timbres fiscales)": "luis@biancorelab.com",
         "KSTRT Alejandro": "luis@biancorelab.com",
