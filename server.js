@@ -487,99 +487,203 @@ app.get('/no-autorizar-formulario/:token', async (req, res) => {
 app.post('/api/transferencia', async (req, res) => {
     const session = await client.startSession();
     try {
-      session.startTransaction();
-      const { origen, destino, applicant } = req.body;
-      const cantidad = parseFloat(req.body.cantidad);
-  
-      if (isNaN(cantidad) || cantidad <= 0) {
-        throw new Error('La cantidad debe ser un número positivo');
-      }
-  
-      const origenDoc = await client.db("Formulario").collection('rubros').findOne({ _id: new ObjectId(origen) });
-      const destinoDoc = await client.db("Formulario").collection('rubros').findOne({ _id: new ObjectId(destino) });
-  
-      if (!origenDoc || typeof origenDoc.Acumulado !== 'number' || origenDoc.Acumulado < cantidad) {
-        throw new Error('Fondos insuficientes o rubro origen no válido');
-      }
-      if (!destinoDoc || typeof destinoDoc.Acumulado !== 'number') {
-        throw new Error('Rubro destino no válido');
-      }
-  
-      // Generar un token único para la solicitud de transferencia
-      const token = uuidv4();
-  
-      // Guardar la solicitud en la base de datos con el token
-      await client.db("Formulario").collection('solicitudesTransferencia').insertOne({
-        token,
-        origen,
-        destino,
-        cantidad,
-        applicant,
-        autorizado: false
-      });
-  
-      // Obtener los nombres de los rubros
-      const origenNombre = origenDoc.Concepto;
-      const destinoNombre = destinoDoc.Concepto;
-  
-      // Enviar correo electrónico con botones para autorizar o cancelar
-      const autorizarLink = `http://localhost:${port}/autorizar-transferencia/${token}`;
-      const cancelarLink = `http://localhost:${port}/cancelar-transferencia/${token}`;
-  
-      const htmlEmailContent = `
-        <!DOCTYPE html>
-        <html lang="es">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Solicitud de Autorización de Transferencia</title>
-            <style>
-                /* Estilos CSS para el correo electrónico */
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>Solicitud de Autorización de Transferencia</h1>
-                <p>Se ha solicitado una transferencia de fondos desde el rubro <strong>${origenNombre}</strong> al rubro <strong>${destinoNombre}</strong> por un monto de <strong>${cantidad}</strong>.</p>
-                <p>Por favor, autoriza o cancela esta solicitud.</p>
-                <div class="button-container">
-                    <a href="${autorizarLink}" class="button button-autorizar">Autorizar</a>
-                    <a href="${cancelarLink}" class="button button-cancelar">Cancelar</a>
+        session.startTransaction();
+        const { origen, destino, applicant } = req.body;
+        const cantidad = parseFloat(req.body.cantidad);
+
+        if (isNaN(cantidad) || cantidad <= 0) {
+            throw new Error('La cantidad debe ser un número positivo');
+        }
+
+        const origenDoc = await client.db("Formulario").collection('rubros').findOne({ _id: new ObjectId(origen) });
+        const destinoDoc = await client.db("Formulario").collection('rubros').findOne({ _id: new ObjectId(destino) });
+
+        if (!origenDoc || typeof origenDoc.Acumulado !== 'number' || origenDoc.Acumulado < cantidad) {
+            throw new Error('Fondos insuficientes o rubro origen no válido');
+        }
+        if (!destinoDoc || typeof destinoDoc.Acumulado !== 'number') {
+            throw new Error('Rubro destino no válido');
+        }
+
+        // Definir variables de autorización según el solicitante
+        let autorizadorEmail;
+        let autorizadorNombre;
+        let autorizado = false; // Por defecto, la solicitud no está autorizada
+        let notificarPaco = false; // Por defecto, no se notifica a Paco
+        let notificarEdelgado = false; // Por defecto, no se notifica a Edelgado
+
+        if (applicant === 'cloera@biancorelab.com') {
+            autorizadorEmail = 'luis@biancorelab.com';
+            autorizadorNombre = 'Luis';
+        } else if (applicant === 'paco@biancorelab.com') {
+            autorizadorEmail = 'carlos@biancorelab.com';
+            autorizadorNombre = 'Charly';
+        } else if (applicant === 'luis@biancorelab.com' || applicant === 'carlos@biancorelab.com') {
+            autorizado = true; // Si el solicitante es Luis o Carlos, la solicitud se autoriza al instante
+            notificarPaco = true; // Se notifica a Paco
+            notificarEdelgado = true; // Se notifica a Edelgado
+        }
+
+        // Generar un token único para la solicitud de transferencia
+        const token = uuidv4();
+
+        // Si la solicitud fue autorizada al instante, se notifica a Paco y a Edelgado
+        if (autorizado) {
+            // Agregar el nombre del autorizador al documento de la solicitud de transferencia
+            const autorizador = autorizadorNombre;
+        
+            // Guardar la solicitud en la base de datos con el token, la autorización y el nombre del autorizador
+            await client.db("Formulario").collection('solicitudesTransferencia').insertOne({
+                token,
+                origen,
+                destino,
+                cantidad,
+                applicant,
+                autorizado,
+                autorizador // Guardamos el nombre del autorizador
+            });
+        
+            // Enviar correos electrónicos a Chris y Paco
+            const chrisEmail = 'chris@biancorelab.com'; // Dirección de correo de Chris
+            const pacoEmail = 'paco@biancorelab.com'; // Dirección de correo de Paco
+        
+            const htmlEmailContentChris = `
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Solicitud de Transferencia Autorizada</title>
+                    <style>
+                        /* Estilos CSS para el correo electrónico */
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Solicitud de Transferencia Autorizada</h1>
+                        <p>Estimado Chris,</p>
+                        <p>Se ha autorizado una solicitud de transferencia realizada por ${autorizadorNombre}.</p>
+                        <p>Por favor, revise los detalles en su sistema.</p>
+                    </div>
+                </body>
+                </html>
+            `;
+        
+            const htmlEmailContentPaco = `
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Solicitud de Transferencia Autorizada</title>
+                    <style>
+                        /* Estilos CSS para el correo electrónico */
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Solicitud de Transferencia Autorizada</h1>
+                        <p>Estimado Paco,</p>
+                        <p>Se ha autorizado una solicitud de transferencia realizada por ${autorizadorNombre}.</p>
+                        <p>Por favor, revise los detalles en su sistema.</p>
+                    </div>
+                </body>
+                </html>
+            `;
+        
+            const transporter = nodemailer.createTransport({
+                host: process.env.EMAIL_HOST,
+                port: parseInt(process.env.EMAIL_PORT, 10),
+                secure: process.env.EMAIL_SECURE === 'true',
+                auth: {
+                    user: process.env.EMAIL_USER,
+                    pass: process.env.EMAIL_PASS,
+                },
+            });
+        
+            const mailOptionsChris = {
+                from: 'edelgado@biancorelab.com',
+                to: chrisEmail,
+                subject: 'Solicitud de Transferencia Autorizada',
+                html: htmlEmailContentChris
+            };
+        
+            const mailOptionsPaco = {
+                from: 'edelgado@biancorelab.com',
+                to: pacoEmail,
+                subject: 'Solicitud de Transferencia Autorizada',
+                html: htmlEmailContentPaco
+            };
+        
+            await transporter.sendMail(mailOptionsChris);
+            await transporter.sendMail(mailOptionsPaco);
+        
+            res.json({ message: 'Solicitud de transferencia autorizada al instante.' });
+            return;
+        }
+        // Obtener los nombres de los rubros
+        const origenNombre = origenDoc.Concepto;
+        const destinoNombre = destinoDoc.Concepto;
+
+        // Enviar correo electrónico con botones para autorizar o cancelar
+        const autorizarLink = `http://localhost:${port}/autorizar-transferencia/${token}`;
+        const cancelarLink = `http://localhost:${port}/cancelar-transferencia/${token}`;
+
+        const htmlEmailContent = `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Solicitud de Autorización de Transferencia</title>
+                <style>
+                    /* Estilos CSS para el correo electrónico */
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Solicitud de Autorización de Transferencia</h1>
+                    <p>Se ha solicitado una transferencia de fondos desde el rubro <strong>${origenNombre}</strong> al rubro <strong>${destinoNombre}</strong> por un monto de <strong>${cantidad}</strong>.</p>
+                    <p>Por favor, ${autorizadorNombre}, autoriza o cancela esta solicitud.</p>
+                    <div class="button-container">
+                        <a href="${autorizarLink}" class="button button-autorizar">Autorizar</a>
+                        <a href="${cancelarLink}" class="button button-cancelar">Cancelar</a>
+                    </div>
                 </div>
-            </div>
-        </body>
-        </html>
-      `;
-  
-      // Enviar el correo electrónico a edelgado@biancorelab.com
-      const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
-        port: parseInt(process.env.EMAIL_PORT, 10),
-        secure: process.env.EMAIL_SECURE === 'true',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    });
-  
-      const mailOptions = {
-        from: 'edelgado@biancorelab.com',
-        to: 'edelgado@biancorelab.com',
-        subject: 'Solicitud de Autorización de Transferencia',
-        html: htmlEmailContent
-      };
-  
-      await transporter.sendMail(mailOptions);
-  
-      res.json({ message: 'Solicitud de transferencia enviada. Por favor, revise su correo electrónico.' });
+            </body>
+            </html>
+        `;
+
+        // Enviar el correo electrónico al autorizador correspondiente
+        const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: parseInt(process.env.EMAIL_PORT, 10),
+            secure: process.env.EMAIL_SECURE === 'true',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        const mailOptions = {
+            from: 'edelgado@biancorelab.com',
+            to: autorizadorEmail,
+            subject: 'Solicitud de Autorización de Transferencia',
+            html: htmlEmailContent
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.json({ message: 'Solicitud de transferencia enviada. Por favor, revise su correo electrónico.' });
     } catch (error) {
-      await session.abortTransaction();
-      console.error('Error durante la transacción:', error);
-      res.status(500).json({ message: 'Error durante la transferencia', error: error.message });
+        await session.abortTransaction();
+        console.error('Error durante la transacción:', error);
+        res.status(500).json({ message: 'Error durante la transferencia', error: error.message });
     } finally {
-      session.endSession();
+        session.endSession();
     }
-  });
+});
+
 
   app.get('/autorizar-transferencia/:token', async (req, res) => {
     const { token } = req.params;

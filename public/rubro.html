@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Solicitud de Cambio de Rubro</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -61,12 +62,6 @@
         .saldo-info span {
             font-weight: bold;
         }
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-        }
         .header {
             display: flex;
             justify-content: space-between;
@@ -96,7 +91,6 @@
         .header button:hover {
             background-color: #45a049;
         }
-        /* ... el resto de tu código CSS ... */
     </style>
 </head>
 <body>
@@ -108,14 +102,14 @@
     <form id="formRubros">
         <div class="form-group">
             <label for="rubroOrigen">Rubro Origen:</label>
-            <select id="rubroOrigen">
+            <select id="rubroOrigen" class="select2" data-live-search="true">
                 <option value="">Seleccionar Rubro</option>
             </select>
         </div>
 
         <div class="form-group">
             <label for="rubroDestino">Rubro Destino:</label>
-            <select id="rubroDestino">
+            <select id="rubroDestino" class="select2" data-live-search="true">
                 <option value="">Seleccionar Rubro</option>
             </select>
         </div>
@@ -139,17 +133,10 @@
             <label for="applicant">Solicitante:</label>
             <select id="applicant">
                 <option value="">Seleccionar Solicitante</option>
-                <option value="fvargas@biancorelab.com">Fernando Vargas</option>
                 <option value="francisco@biancorelab.com">Francisco Macias</option>
                 <option value="edelgado@biancorelab.com">Edhson Delgado</option>
-                <option value="tgallo@biancorelab.com">Teresa Hermosillo</option>
-                <option value="cobranza@biancorelab.com">Valeria González</option>
                 <option value="cloera@biancorelab.com">Christian Loera</option>
-                <option value="jlopez@biancorelab.com">Julio López</option>
-                <option value="agonzalez@biancorelab.com">Alondra González</option>
                 <option value="carlos@biancorelab.com">Carlos Ancona</option>
-                <option value="ecortes@biancorelab.com">Eliud Cortes</option>
-                <option value="ihernandez@biancorelab.com">Isabel Hérnandez</option>
                 <option value="luis@biancorelab.com">Luis Ceballos</option>
             </select>
         </div>
@@ -157,87 +144,89 @@
         <button type="submit">Enviar Solicitud</button>
     </form>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <script>
 $(document).ready(function() {
+    $('.select2').select2();
+    const actualizaSaldos = () => {
+        const origenId = $('#rubroOrigen').val();
+        const destinoId = $('#rubroDestino').val();
 
-const actualizaSaldos = () => {
-    const origenId = $('#rubroOrigen').val();
-    const destinoId = $('#rubroDestino').val();
+        if (origenId && destinoId) {
+            $.get(`/api/saldos?origen=${origenId}&destino=${destinoId}`, function(data) {
+                if (data.origen && data.destino) {
+                    $('#saldoOrigen').text(numberWithCommas(data.origen.Acumulado));
+                    $('#saldoDestino').text(numberWithCommas(data.destino.Acumulado));
 
-    if (origenId && destinoId) {
-        $.get(`/api/saldos?origen=${origenId}&destino=${destinoId}`, function(data) {
-            if (data.origen && data.destino) {
-                $('#saldoOrigen').text(numberWithCommas(data.origen.Acumulado));
-                $('#saldoDestino').text(numberWithCommas(data.destino.Acumulado));
+                    const cantidad = parseFloat($('#cantidadTransferir').val()) || 0;
+                    const saldoFinalOrigen = data.origen.Acumulado - cantidad;
+                    const saldoFinalDestino = data.destino.Acumulado + cantidad;
 
-                const cantidad = parseFloat($('#cantidadTransferir').val()) || 0;
-                const saldoFinalOrigen = data.origen.Acumulado - cantidad;
-                const saldoFinalDestino = data.destino.Acumulado + cantidad;
-
-                $('#saldoFinalOrigen').text(numberWithCommas(saldoFinalOrigen));
-                $('#saldoFinalDestino').text(numberWithCommas(saldoFinalDestino));
-            }
-        }).fail(function(error) {
-            console.error('Error al obtener los saldos', error);
-        });
-    }
-};
-
-function numberWithCommas(x) {
-    return x.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-}
-
-$.get('/api/rubros', function(rubros) {
-    rubros.forEach(function(rubro) {
-        $('#rubroOrigen, #rubroDestino').append(new Option(rubro.Concepto, rubro._id));
-    });
-    actualizaSaldos();
-});
-
-$('#rubroOrigen').change(function() {
-    const origenId = $(this).val();
-    $('#rubroDestino option').show();
-    $('#rubroDestino option[value="' + origenId + '"]').hide();
-    actualizaSaldos();
-});
-
-$('#rubroDestino').change(function() {
-    const destinoId = $(this).val();
-    $('#rubroOrigen option').show();
-    $('#rubroOrigen option[value="' + destinoId + '"]').hide();
-    actualizaSaldos();
-});
-
-$('#cantidadTransferir').on('input', actualizaSaldos);
-
-$('#formRubros').submit(function(e) {
-    e.preventDefault();
-    const origen = $('#rubroOrigen').val();
-    const destino = $('#rubroDestino').val();
-    const cantidad = parseFloat($('#cantidadTransferir').val());
-    const applicant = document.getElementById('applicant').value;
-    if (isNaN(cantidad) || cantidad <= 0) {
-        alert('Por favor ingresa una cantidad válida.');
-        return;
-    }
-
-    $.ajax({
-        url: '/api/transferencia',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({ origen, destino, cantidad, applicant }),
-        success: function(response) {
-            alert('Transferencia realizada: ' + response.message);
-            actualizaSaldos();
-        },
-        error: function(jqXHR, textStatus, errorThrown) {
-            alert('Error en la transferencia: el rubro de origen no puede quedar en negativo' + textStatus);
+                    $('#saldoFinalOrigen').text(numberWithCommas(saldoFinalOrigen));
+                    $('#saldoFinalDestino').text(numberWithCommas(saldoFinalDestino));
+                }
+            }).fail(function(error) {
+                console.error('Error al obtener los saldos', error);
+            });
         }
+    };
+
+    function numberWithCommas(x) {
+        return x.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    $.get('/api/rubros', function(rubros) {
+        rubros.forEach(function(rubro) {
+            $('#rubroOrigen, #rubroDestino').append(new Option(rubro.Concepto, rubro._id));
+        });
+        actualizaSaldos();
+    });
+
+    $('#rubroOrigen').change(function() {
+        const origenId = $(this).val();
+        $('#rubroDestino option').prop('disabled', false);
+        $('#rubroDestino option[value="' + origenId + '"]').prop('disabled', true);
+        $('#rubroDestino').trigger('change.select2');
+        actualizaSaldos();
+    });
+
+    $('#rubroDestino').change(function() {
+        const destinoId = $(this).val();
+        $('#rubroOrigen option').prop('disabled', false);
+        $('#rubroOrigen option[value="' + destinoId + '"]').prop('disabled', true);
+        $('#rubroOrigen').trigger('change.select2');
+        actualizaSaldos();
+    });
+
+    $('#cantidadTransferir').on('input', actualizaSaldos);
+
+    $('#formRubros').submit(function(e) {
+        e.preventDefault();
+        const origen = $('#rubroOrigen').val();
+        const destino = $('#rubroDestino').val();
+        const cantidad = parseFloat($('#cantidadTransferir').val());
+        const applicant = document.getElementById('applicant').value;
+        if (isNaN(cantidad) || cantidad <= 0) {
+            alert('Por favor ingresa una cantidad válida.');
+            return;
+        }
+
+        $.ajax({
+            url: '/api/transferencia',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ origen, destino, cantidad, applicant }),
+            success: function(response) {
+                alert('Transferencia realizada: ' + response.message);
+                actualizaSaldos();
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                alert('Error en la transferencia: el rubro de origen no puede quedar en negativo' + textStatus);
+            }
+        });
     });
 });
-});
-
-        </script>
-        
+    </script>
 </body>
 </html>
+    

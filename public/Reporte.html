@@ -1,187 +1,256 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reporte de Rubros</title>
+  <title>Reporte de Datos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
   <style>
-    /* Estilos generales */
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f8f8f8;
-      color: #333;
+      font-family: 'Poppins', sans-serif;
+      background-color: #f8f9fa;
+      color: #212529;
     }
 
-    /* Estilos para el encabezado */
     h1 {
-      text-align: center;
-      padding: 20px 0;
-      background-color: #182857;
-      color: #fff;
-      margin-bottom: 30px;
+      color: #343a40;
+      margin-bottom: 40px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
     }
 
-    /* Estilos para la tabla */
-    table {
-      width: 95%;
-      max-width: 1200px;
-      margin: 0 auto;
-      border-collapse: collapse;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    .form-control {
+      display: inline-block;
+      width: auto;
+      margin-right: 10px;
+      border-radius: 0.25rem;
+      border-color: #ced4da;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .table {
       background-color: #fff;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      border-radius: 0.25rem;
+      border-color: #dee2e6;
     }
 
-    th, td {
-      padding: 12px 15px;
-      text-align: left;
+    .table th,
+    .table td {
+      vertical-align: middle;
+      padding: 1rem;
     }
 
-    th {
-      background-color: #182857;
+    .table thead th {
+      background-color: #343a40;
       color: #fff;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
-    tr:nth-child(even) {
-      background-color: #f2f2f2;
+    .table tfoot td {
+      font-weight: 700;
+      background-color: #f8f9fa;
+      border-top: 2px solid #dee2e6;
     }
 
-    /* Estilos para el filtro */
-    #areaFilter {
-      display: block;
-      width: 200px;
-      margin: 0 auto 20px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 16px;
-    }
-
-    /* Estilos para las celdas de diferencia */
-    .green {
+    .negative {
       color: #28a745;
-      font-weight: bold;
+      font-weight: 600;
     }
 
-    .red {
+    .positive {
       color: #dc3545;
-      font-weight: bold;
+      font-weight: 600;
     }
 
-    /* Estilos para hacer la tabla responsive */
-    @media (max-width: 768px) {
-      table {
-        width: 100%;
-      }
-
-      th, td {
-        padding: 8px;
-      }
+    .zero-percent {
+      color: #212529;
+      font-weight: 600;
     }
-    .areaFilter {
-  display: block;
-  width: 200px;
-  margin: 0 auto 0px;
-  padding: 10px;
-  border-radius: 5px;
-  font-size: 16px;
-  text-align: center; /* Alineación al centro */
-}
   </style>
 </head>
 <body>
-  <h1>Reporte de Rubros</h1>
-  <label class="areaFilter" for="areaFilter">Filtrar por área:</label>
-  <select id="areaFilter">
-    <option value="">Todas</option>
-    <!-- Las opciones se llenarán con JavaScript -->
-  </select>
-  <table id="reportTable">
-    <thead>
-      <tr>
-        <th>Concepto</th>
-        <th>Área</th>
-        <th>Presupuesto</th>
-        <th>Real</th>
-        <th>Diferencia $</th>
-        <th>Diferencia %</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Los datos de la tabla se llenarán con JavaScript -->
-    </tbody>
-    <tfoot>
-      <tr>
-        <th colspan="2">Total</th>
-        <th id="totalPresupuesto"></th>
-        <th id="totalReal"></th>
-        <th id="totalDiferencia"></th>
-        <th id="totalDiferenciaPorcentaje"></th>
-      </tr>
-    </tfoot>
-  </table>
+  <div class="container py-5">
+    <h1 class="text-center">Reporte de Rubros</h1>
+
+    <div class="mb-4">
+      <input type="text" class="form-control" id="searchInput" placeholder="Buscar concepto..." oninput="filterTable()">
+      <select class="form-control" id="areaFilter" onchange="filterTable()">
+        <option value="">Todas las áreas</option>
+      </select>
+    </div>
+
+    <table class="table table-striped table-bordered">
+      <thead>
+        <tr>
+          <th>Concepto</th>
+          <th>Área</th>
+          <th>Presupuesto</th>
+          <th>Real</th>
+          <th>Diferencia ($)</th>
+          <th>Diferencia (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Los datos se insertarán aquí -->
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2">Total</td>
+          <td id="totalPresupuesto">0</td>
+          <td id="totalReal">0</td>
+          <td id="totalDiferencia">$0</td>
+          <td id="totalDiferenciaPercent">0.00%</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      fetch('/api/report-data')
-        .then(response => response.json())
-        .then(data => {
-          const tableBody = document.getElementById('reportTable').getElementsByTagName('tbody')[0];
-          const areaFilter = document.getElementById('areaFilter');
-          // Organizar los datos por área
-          data.sort((a, b) => a.Area.localeCompare(b.Area));
-          // Llenar las opciones del filtro con las áreas
-          let areas = [...new Set(data.map(item => item.Area))];
-          areas.forEach(area => {
-            let option = document.createElement('option');
-            option.value = area;
-            option.textContent = area;
-            areaFilter.appendChild(option);
-          });
-          // Función para llenar la tabla con los datos filtrados
-          function fillTable() {
-            tableBody.innerHTML = '';
-            let totalPresupuesto = 0;
-            let totalReal = 0;
-            let totalDiferencia = 0;
-            data.filter(item => !areaFilter.value || item.Area === areaFilter.value)
-              .forEach(item => {
-                let row = tableBody.insertRow();
-                row.insertCell(0).textContent = item.Concepto;
-                row.insertCell(1).textContent = item.Area;
-                let presupuesto = parseFloat(item.Presupuesto);
-                let real = parseFloat(item.Real);
-                totalPresupuesto += presupuesto;
-                totalReal += real;
-                let diff = real - presupuesto;
-                totalDiferencia += diff;
-                row.insertCell(2).textContent = presupuesto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-                row.insertCell(3).textContent = real.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-                // Calcular la diferencia en monto y porcentaje
-                let diffPercent = (diff / presupuesto) * 100;
-                // Agregar las celdas de diferencia en monto y porcentaje
-                let diffCell = row.insertCell(4);
-                diffCell.textContent = diff.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-                diffCell.className = diff <= 0 ? 'green' : 'red';
-                let diffPercentCell = row.insertCell(5);
-                diffPercentCell.textContent = diffPercent.toFixed(2) + '%';
-                diffPercentCell.className = diffPercent <= 0 ? 'green' : 'red';
-              });
-            // Mostrar los totales
-            document.getElementById('totalPresupuesto').textContent = totalPresupuesto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-            document.getElementById('totalReal').textContent = totalReal.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-            document.getElementById('totalDiferencia').textContent = totalDiferencia.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-            let totalDiferenciaPorcentaje = (totalDiferencia / totalPresupuesto) * 100;
-            document.getElementById('totalDiferenciaPorcentaje').textContent = totalDiferenciaPorcentaje.toFixed(2) + '%';
-          }
-          // Llenar la tabla inicialmente
-          fillTable();
-          // Actualizar la tabla cuando se cambia el filtro
-          areaFilter.addEventListener('change', fillTable);
-        })
-        .catch(error => console.error('Error:', error));
-    });
+    let totalPresupuestoAll = 0;
+    let totalRealAll = 0;
+    let totalDiferenciaAll = 0;
+
+    // Función para llenar la tabla con los datos
+    function fillTable(data) {
+      const tableBody = document.querySelector('tbody');
+      tableBody.innerHTML = '';
+
+      totalPresupuestoAll = 0;
+      totalRealAll = 0;
+      totalDiferenciaAll = 0;
+
+      // Llenar la lista desplegable de áreas
+      const areaFilter = document.querySelector('#areaFilter');
+      areaFilter.innerHTML = '<option value="">Todas las áreas</option>';
+      const areas = new Set(data.map(item => item.Area));
+      areas.forEach(area => {
+        const option = document.createElement('option');
+        option.value = area;
+        option.text = area;
+        areaFilter.add(option);
+      });
+
+      let totalPresupuestoVisible = 0;
+      let totalRealVisible = 0;
+      let totalDiferenciaVisible = 0;
+
+      data.forEach(item => {
+        const row = document.createElement('tr');
+
+        const conceptoCell = document.createElement('td');
+        conceptoCell.textContent = item.Concepto;
+        row.appendChild(conceptoCell);
+
+        const areaCell = document.createElement('td');
+        areaCell.textContent = item.Area;
+        row.appendChild(areaCell);
+
+        const presupuestoCell = document.createElement('td');
+        presupuestoCell.textContent = formatNumber(item.Presupuesto);
+        row.appendChild(presupuestoCell);
+        totalPresupuestoAll += item.Presupuesto;
+        totalPresupuestoVisible += item.Presupuesto;
+
+        const realCell = document.createElement('td');
+        realCell.textContent = formatNumber(item.Real);
+        row.appendChild(realCell);
+        totalRealAll += item.Real;
+        totalRealVisible += item.Real;
+
+        const diferencia = item.Real - item.Presupuesto;
+        const diferenciaCell = document.createElement('td');
+        diferenciaCell.textContent = formatNumber(diferencia);
+        if (diferencia < 0) {
+          diferenciaCell.classList.add('negative');
+        } else if (diferencia > 0 && diferencia >= 0.01) {
+          diferenciaCell.classList.add('positive');
+        }
+        row.appendChild(diferenciaCell);
+        totalDiferenciaAll += diferencia;
+        totalDiferenciaVisible += diferencia;
+
+        const diferenciaPercent = document.createElement('td');
+        let percent;
+        if (isNaN(diferencia) || item.Presupuesto === 0) {
+          percent = '0.00%';
+        } else {
+          percent = `${((diferencia / item.Presupuesto) * 100).toFixed(2)}%`;
+        }
+        diferenciaPercent.textContent = percent;
+        if (isNaN(diferencia)) {
+          diferenciaPercent.classList.add('zero-percent');
+        } else if (diferencia < 0) {
+          diferenciaPercent.classList.add('negative');
+        } else if (diferencia > 0 && diferencia >= 0.01) {
+          diferenciaPercent.classList.add('positive');
+        }
+        row.appendChild(diferenciaPercent);
+
+        tableBody.appendChild(row);
+      });
+
+      updateTotal();
+    }
+
+    // Función para actualizar el total
+    function updateTotal() {
+      document.querySelector('#totalPresupuesto').textContent = formatNumber(totalPresupuestoAll.toFixed(2));
+      document.querySelector('#totalReal').textContent = formatNumber(totalRealAll.toFixed(2));
+      document.querySelector('#totalDiferencia').textContent = formatNumber(totalDiferenciaAll.toFixed(2));
+      document.querySelector('#totalDiferenciaPercent').textContent = `${((totalDiferenciaAll / totalPresupuestoAll) * 100).toFixed(2)}%`;
+    }
+
+    // Función para filtrar la tabla
+    function filterTable() {
+      const searchInput = document.querySelector('#searchInput').value.toLowerCase();
+      const areaFilter = document.querySelector('#areaFilter').value;
+
+      const tableRows = document.querySelectorAll('tbody tr');
+      let totalPresupuestoVisible = 0;
+      let totalRealVisible = 0;
+      let totalDiferenciaVisible = 0;
+
+      tableRows.forEach(row => {
+        const concepto = row.cells[0].textContent.toLowerCase();
+        const area = row.cells[1].textContent;
+
+        const showRow = concepto.includes(searchInput) && (areaFilter === '' || area === areaFilter);
+        row.style.display = showRow ? '' : 'none';
+        if (showRow) {
+          totalPresupuestoVisible += parseFloat(row.cells[2].textContent.replace(/,/g, ''));
+          totalRealVisible += parseFloat(row.cells[3].textContent.replace(/,/g, ''));
+          totalDiferenciaVisible += parseFloat(row.cells[4].textContent.replace(/,/g, ''));
+        }
+      });
+
+      document.querySelector('#totalPresupuesto').textContent = formatNumber(totalPresupuestoVisible.toFixed(2));
+      document.querySelector('#totalReal').textContent = formatNumber(totalRealVisible.toFixed(2));
+      document.querySelector('#totalDiferencia').textContent = formatNumber(totalDiferenciaVisible.toFixed(2));
+      document.querySelector('#totalDiferenciaPercent').textContent = `${((totalDiferenciaVisible / totalPresupuestoVisible) * 100).toFixed(2)}%`;
+
+      if (searchInput === '' && areaFilter === '') {
+        updateTotal();
+      }
+    }
+
+    // Función para formatear números con comas y puntos
+    function formatNumber(number) {
+      return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    // Llamar a la función fillTable con los datos obtenidos del servidor
+    fetch('/api/report-data')
+      .then(response => response.json())
+      .then(data => fillTable(data))
+      .catch(error => console.error('Error al obtener los datos:', error));
   </script>
 </body>
 </html>
