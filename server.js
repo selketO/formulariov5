@@ -144,8 +144,8 @@ app.post('/enviar-formulario', async (req, res) => {
             });
     
 
-            const authorizationLink = `http://localhost:${port}/autorizar-formulario/${uniqueToken}`;
-            const noAuthorizationLink = `http://localhost:${port}/no-autorizar-formulario/${uniqueToken}`;
+            const authorizationLink = `https://formulariov3.onrender.com/autorizar-formulario/${uniqueToken}`;
+            const noAuthorizationLink = `https://formulariov3.onrender.com/no-autorizar-formulario/${uniqueToken}`;
         const htmlEmailContent = `
       <!DOCTYPE html>
       <html lang="es">
@@ -244,7 +244,7 @@ app.post('/enviar-formulario', async (req, res) => {
       </body>
       </html>
       `;
-      const cancelLink = `http://localhost:${port}/cancelar-formulario/${uniqueToken}`;
+      const cancelLink = `https://formulariov3.onrender.com/cancelar-formulario/${uniqueToken}`;
       const htmlEmailContentCancel = `
           <!DOCTYPE html>
           <html lang="es">
@@ -626,8 +626,8 @@ app.post('/api/transferencia', async (req, res) => {
         const destinoNombre = destinoDoc.Concepto;
 
         // Enviar correo electrónico con botones para autorizar o cancelar
-        const autorizarLink = `http://localhost:${port}/autorizar-transferencia/${token}`;
-        const cancelarLink = `http://localhost:${port}/cancelar-transferencia/${token}`;
+        const autorizarLink = `https://formulariov3.onrender.com/autorizar-transferencia/${token}`;
+        const cancelarLink = `https://formulariov3.onrender.com/cancelar-transferencia/${token}`;
 
         const htmlEmailContent = `
             <!DOCTYPE html>
@@ -823,8 +823,8 @@ app.get('/cancelar-formulario/:token', async (req, res) => {
             },
         });
 
-        const confirmCancelLink = `http://localhost:${port}/confirmar-cancelacion/${token}`;
-        const rejectCancelLink = `http://localhost:${port}/rechazar-cancelacion/${token}`;
+        const confirmCancelLink = `https://formulariov3.onrender.com/confirmar-cancelacion/${token}`;
+        const rejectCancelLink = `https://formulariov3.onrender.com/rechazar-cancelacion/${token}`;
 
         const htmlEmailContent = `
             <!DOCTYPE html>
