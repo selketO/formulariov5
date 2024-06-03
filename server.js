@@ -27,7 +27,7 @@ let bd;
 client.connect()
   .then(() => {
     console.log("Connected successfully to MongoDB");
-    bd = client.db("Formulario"); // Reemplaza "nombreDeTuBaseDeDatos" con el nombre real de tu base de datos
+    bd = client.db("Formulario");
   })
   .catch(err => console.error('Failed to connect to MongoDB', err));
 
@@ -35,8 +35,9 @@ admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 });
 const db = admin.firestore();
+
+
 app.get('/', (req, res) => {
-    // Cuando vayan a la ruta raíz, les servirás el archivo HTML.
     res.sendFile(path.join(__dirname, 'public', 'formulario.html'));
 });
 
@@ -406,7 +407,6 @@ app.get('/autorizar-formulario/:token', async (req, res) => {
     `);
 });
 
-// Función auxiliar para enviar correos electrónicos
 async function sendEmail(transporter, recipient, subject, message, attachment = null) {
     const mailOptions = {
         from: process.env.EMAIL_FROM,
@@ -484,6 +484,7 @@ app.get('/no-autorizar-formulario/:token', async (req, res) => {
         res.status(500).send('Error al enviar correo de no autorización.');
     });
 });
+
 app.post('/api/transferencia', async (req, res) => {
     const session = await client.startSession();
     try {
@@ -684,7 +685,6 @@ app.post('/api/transferencia', async (req, res) => {
     }
 });
 
-
   app.get('/autorizar-transferencia/:token', async (req, res) => {
     const { token } = req.params;
 
@@ -788,7 +788,6 @@ app.get('/cancelar-transferencia/:token', async (req, res) => {
 });
 ;
 
-  
 app.get('/cancelar-formulario/:token', async (req, res) => {
     const { token } = req.params;
 
@@ -890,11 +889,11 @@ app.get('/confirmar-cancelacion/:token', async (req, res) => {
     res.send('La cancelación ha sido confirmada y procesada correctamente.');
 });
 
-// Ruta para rechazar la cancelación del formulario
 app.get('/rechazar-cancelacion/:token', async (req, res) => {
     const { token } = req.params;
     res.send('La cancelación ha sido rechazada.');
 });
+
 app.get('/api/rubros', async (req, res) => {
     try {
         const rubros = await bd.collection('rubros').find({}).toArray();
@@ -903,6 +902,7 @@ app.get('/api/rubros', async (req, res) => {
         res.status(500).json({ message: 'Error al obtener los rubros' });
     }
 });
+
 app.get('/api/saldos', async (req, res) => {
     try {
         const origen = await bd.collection('rubros').findOne({ _id: new ObjectId(req.query.origen) });
@@ -925,8 +925,6 @@ app.get('/api/saldos', async (req, res) => {
         res.status(500).json({ message: 'Error al obtener los saldos', error: error.message });
     }
 });
-
-
 
 app.get('/api/report-data', async (req, res) => {
     try {

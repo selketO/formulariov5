@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Formulario con Firma</title>
@@ -10,144 +11,244 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
     <style>
         .select2-container .select2-selection--single {
-    box-sizing: border-box;
-    cursor: pointer;
-    display: block;
-    height: 40px;
-    user-select: none;
-    -webkit-user-select: none;
-}
-.select2-container--default .select2-selection--single {
-    background-color: #fff;
-    border: 1px solid #d5cece;
-    border-radius: 4px;
-}
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 40px; /* Altura para alinear con el tamaño del input */
-    position: absolute;
-    top: 1px; /* Ajuste fino para alinear la flecha */
-    right: 1px; /* Ajuste fino para alinear la flecha */
-    width: 20px; /* Ancho de la flecha */
-}
+            box-sizing: border-box;
+            cursor: pointer;
+            display: block;
+            height: 40px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .select2-container--default .select2-selection--single {
+            background-color: #fff;
+            border: 1px solid #d5cece;
+            border-radius: 4px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 40px;
+            /* Altura para alinear con el tamaño del input */
+            position: absolute;
+            top: 1px;
+            /* Ajuste fino para alinear la flecha */
+            right: 1px;
+            /* Ajuste fino para alinear la flecha */
+            width: 20px;
+            /* Ancho de la flecha */
+        }
     </style>
 </head>
+
 <body>
-   <div class="form-container">
-    <img src="/img/LOGO BCL H.png" alt="Logo" style="width:300px; margin-top:10px;">
+    <div class="form-container">
+        <img src="/img/LOGO BCL H.png" alt="Logo" style="width:300px; margin-top:10px;">
 
-    <form id="miFormulario" enctype="multipart/form-data">
-        <div class="row">
-            <!-- Espacio en blanco a la izquierda (si es necesario) -->
-            <div class="col-50"></div>
-        
-            <!-- Fecha y Folio a la derecha -->
-            <div class="col-25">
-                <label for="date" class="field-label">Fecha:</label>
-                <input type="text" class="field-input fake-label-input" id="date" name="date" value="" readonly>
-            </div>
-            <div class="col-25">
-                <label for="folio" class="field-label">Folio:</label>
-                <input type="text" class="field-input fake-label-input" id="folio" name="folio" value="" readonly>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-50">
-                <select id="applicant" name="applicant" class="field-input">
-                    <!-- Opciones de aplicantes se agregarán aquí dinámicamente con JavaScript -->
-                </select>
-                <label for="area" class="field-label">Área:</label>
-                <select class="field-input" id="area" name="area">
-                    <!-- Opciones de área aquí -->
-                </select>
-            </div>
-            
+        <form id="miFormulario" enctype="multipart/form-data">
+            <div class="row">
+                <!-- Espacio en blanco a la izquierda (si es necesario) -->
+                <div class="col-50"></div>
 
-        </div>
-
-      
-        <div class="row">
-            <div class="col-50">
-                <label for="productService" class="field-label">Producto o Servicio:</label>
-                <input type="text" class="field-input" id="productService" name="productService">
-            </div>
-            <div class="col-25">
-                <label for="quantity" class="field-label">Cantidad:</label>
-                <input type="number" class="field-input" id="quantity" name="quantity">
-            </div>
-            <div class="col-50">
-                <label for="expenseAmount" class="field-label">Monto de Gasto Unitario (Pesos / sin iva):</label>
-                <input type="number" class="field-input" id="expenseAmount" name="expenseAmount" step="0.01">
-            </div>
-            <div class="col-25">
-                <label for="Mount" class="field-label">Monto total:</label>
-                <input type="text" class="field-input fake-label-input" id="Mount" name="Mount" value="" >
-            </div>
-        </div>
-      
-        <div class="row">
-            <div class="col-50">
-                <label for="provider" class="field-label">Proveedor:</label>
-                <select id="provider" name="provider" class="field-input">
-                    <!-- Opciones de aplicantes se agregarán aquí dinámicamente con JavaScript -->
-                </select>
-            </div>
-            <div class="col-25">
-                <label for="credit" class="field-label">Dias de credito:</label>
-                <input type="number" class="field-input" id="credit" name="credit">
-            </div>
-            <div class="col-25">
-
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-50">
-                <label for="paymentForm" class="field-label">Forma de Pago:</label>
-                <select class="field-input" id="paymentForm" name="paymentForm">
-                    <option value="transferencia">Transferencia</option>
-                    <option value="efectivo">Efectivo</option>
-                    <option value="cargo_domiciliado">Cargo domiciliado</option>
-                    <option value="tarjeta_credito">Tarjeta de crédito</option>
-                </select>
-                <label for="budgetItem" class="field-label">Rubro Presupuestal:</label>
-                <select class="field-input" id="budgetItem" name="budgetItem">
-                    <!-- Las opciones se llenarán dinámicamente con JS -->
-                </select>
-            </div>
-            <div class="col-50">
-                <label for="description" class="field-label">Descripción / Observaciones de Producto o Servicio:</label>
-                <textarea class="field-input" id="description" name="description"></textarea>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-100">
-                <input type="hidden" class="field-input" id="correo" name="correo" required>
-                <input type="hidden" class="field-input" id="correoAplicant" name="correoAplicant" required>
-            </div>
-        </div>
-        <div class="row firma">
-            <div class="col-100 center-content">
-                <div id="signature-label">Firma aquí:</div>
-                <canvas id="firma" width="400" height="200" style="border:1px solid #000;"></canvas>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-100">
-                <div class="button-container">
-                    <button class="button firma" id="clear-applicant">Limpiar Firma de Autorización</button>
-                    <button type="submit" class="button" id="enviar">Enviar</button>
+                <!-- Fecha y Folio a la derecha -->
+                <div class="col-25">
+                    <label for="date" class="field-label">Fecha:</label>
+                    <input type="text" class="field-input fake-label-input" id="date" name="date" value="" readonly>
+                </div>
+                <div class="col-25">
+                    <label for="folio" class="field-label">Folio:</label>
+                    <input type="text" class="field-input fake-label-input" id="folio" name="folio" value="" readonly>
                 </div>
             </div>
-        </div>
-        
-    </form>
-   </div>
-    
+            <div class="row">
+                <div class="col-50">
+                    <label for="area" class="field-label">Área:</label>
+                    <select class="field-input" id="area" name="area">
+                        <!-- Opciones de área aquí -->
+                    </select>
+                </div>
+
+
+            </div>
+
+
+            <div class="row">
+                <div class="col-50">
+                    <label for="productService" class="field-label">Producto o Servicio:</label>
+                    <input type="text" class="field-input" id="productService" name="productService">
+                </div>
+                <div class="col-25">
+                    <label for="quantity" class="field-label">Cantidad:</label>
+                    <input type="number" class="field-input" id="quantity" name="quantity">
+                </div>
+                <div class="col-50">
+                    <label for="expenseAmount" class="field-label">Monto de Gasto Unitario (Pesos / sin iva):</label>
+                    <input type="number" class="field-input" id="expenseAmount" name="expenseAmount" step="0.01">
+                </div>
+                <div class="col-25">
+                    <label for="Mount" class="field-label">Monto total:</label>
+                    <input type="text" class="field-input fake-label-input" id="Mount" name="Mount" value="">
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-50">
+                    <label for="provider" class="field-label">Proveedor:</label>
+                    <select id="provider" name="provider" class="field-input">
+                        <!-- Opciones de aplicantes se agregarán aquí dinámicamente con JavaScript -->
+                    </select>
+                </div>
+                <div class="col-25">
+                    <label for="credit" class="field-label">Dias de credito:</label>
+                    <input type="number" class="field-input" id="credit" name="credit">
+                </div>
+                <div class="col-25">
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-50">
+                    <label for="paymentForm" class="field-label">Forma de Pago:</label>
+                    <select class="field-input" id="paymentForm" name="paymentForm">
+                        <option value="transferencia">Transferencia</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="cargo_domiciliado">Cargo domiciliado</option>
+                        <option value="tarjeta_credito">Tarjeta de crédito</option>
+                    </select>
+                    <label for="budgetItem" class="field-label">Rubro Presupuestal:</label>
+                    <select class="field-input" id="budgetItem" name="budgetItem">
+                        <!-- Las opciones se llenarán dinámicamente con JS -->
+                    </select>
+                </div>
+                <div class="col-50">
+                    <label for="description" class="field-label">Descripción / Observaciones de Producto o
+                        Servicio:</label>
+                    <textarea class="field-input" id="description" name="description"></textarea>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-100">
+                    <input hidden class="field-input" id="correo" name="correo" required>
+                    <input hidden class="field-input" id="correoAplicant" name="correoAplicant" required>
+                    <input hidden class="field-input" id="applicant" name="applicant" required>
+                </div>
+            </div>
+            <div class="row firma">
+                <div class="col-100 center-content">
+                    <div id="signature-label">Firma aquí:</div>
+                    <canvas id="firma" width="400" height="200" style="border:1px solid #000;"></canvas>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-100">
+                    <div class="button-container">
+                        <button class="button firma" id="clear-applicant">Limpiar Firma de Autorización</button>
+                        <button type="submit" class="button" id="enviar">Enviar</button>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+        <button class="button" id="rubroButton" onclick="location.href='rubro.html'">Ir a Rubro</button>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.2.9/firebase-firestore.js"></script>
     <script src="/js/form-logic.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@2.3.2/dist/signature_pad.min.js"></script>
-    <script>    
+    <script>
+        const rubroButton = document.getElementById('rubroButton');
+
+        const authorizedEmails = [
+            "cloera@biancorelab.com",
+            "francisco@biancorelab.com",
+            "luis@biancorelab.com",
+            "carlos@biancorelab.com",
+            "edelgado@biancorelab.com",
+        ];
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = getTokenFromUrl();
+            if (!token) {
+                redirectToLogin();
+            } else {
+                sessionStorage.setItem("authToken", token);
+                const userDetails = parseJwt(token);
+                if (userDetails && userDetails.username) {
+                    sessionStorage.setItem("userEmail", userDetails.username);
+                    sessionStorage.setItem("userName", userDetails.name);
+                    document.getElementById('correoAplicant').value = userDetails.username;  // Establecer automáticamente el solicitante
+                    document.getElementById('applicant').value = userDetails.name;  // Establecer automáticamente el solicitante
+                    showHideRubroButton(userDetails.username);
+            validateTokenAndProceed(token);
+
+                } else {
+                    redirectToLogin();
+                }
+            }
+        });
+
+        function showHideRubroButton(email) {
+            const rubroButton = document.getElementById('rubroButton');
+            if (authorizedEmails.includes(email)) {
+                rubroButton.style.display = 'block'; // Mostrar el botón si el correo está autorizado
+            } else {
+                rubroButton.style.display = 'none'; // Ocultar el botón si no está autorizado
+            }
+        }
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token');
+        }
+
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error("Error parsing JWT: ", e);
+                return null;
+            }
+        }
+
+        function redirectToLogin() {
+            window.location.href = 'https://login-teal-three.vercel.app/';
+        }
+        function validateTokenAndProceed(token) {
+    fetch('https://sesiones-back.onrender.com/validate-token', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            redirectToLogin();
+            throw new Error('Failed to validate token');
+        }
+    })
+    .then(data => {
+        const userDetails = parseJwt(token);
+        if (userDetails && userDetails.username) {
+            sessionStorage.setItem("userEmail", userDetails.username);
+            sessionStorage.setItem("userName", userDetails.name);
+            document.getElementById('applicant').value = userDetails.username;
+            console.log('Access granted', data.user);
+        } else {
+            redirectToLogin();
+        }
+    })
+    .catch(error => {
+        console.error(error);
+        redirectToLogin();
+    });
+}
+
         var canvas = document.getElementById('firma');
         var signaturePad = new SignaturePad(canvas);
         document.getElementById('quantity').addEventListener('input', updateTotalAmount);
@@ -160,12 +261,12 @@
         }
 
 
-        document.getElementById('miFormulario').addEventListener('submit', function(event) {
-
+        document.getElementById('miFormulario').addEventListener('submit', function (event) {
+            event.preventDefault();
             var data = signaturePad.toDataURL(); // Obtener la imagen de la firma en base64
             var correo = document.getElementById('correo').value;
             var correoAplicant = document.getElementById('correoAplicant').value;
-                    // Recoger los valores de los demás campos del formulario
+            // Recoger los valores de los demás campos del formulario
             var applicant = document.getElementById('applicant').value;
             var area = document.getElementById('area').value;
             var productService = document.getElementById('productService').value;
@@ -180,22 +281,24 @@
             var folio = document.getElementById('folio').value;
             var credit = document.getElementById('credit').value;
             console.log(date)
-            
+
             fetch('/enviar-formulario', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ Mount: Mount,correoAplicant:correoAplicant,firma: data, date: date, credit: credit, folio: folio, budgetItem: budgetItem, applicant:applicant,correo: correo, description: description, area: area, productService: productService,quantity: quantity,expenseAmount: expenseAmount,provider: provider, paymentForm: paymentForm}),
+                body: JSON.stringify({ Mount: Mount, correoAplicant: correoAplicant, firma: data, date: date, credit: credit, folio: folio, budgetItem: budgetItem, applicant: applicant, correo: correo, description: description, area: area, productService: productService, quantity: quantity, expenseAmount: expenseAmount, provider: provider, paymentForm: paymentForm }),
             })
-            .then(response => response.text())
-            .then(data => {
-                alert(data);
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
+                .then(response => response.text())
+                .then(data => {
+                    alert(data);
+                    location.reload();
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
         });
     </script>
 </body>
+
 </html>

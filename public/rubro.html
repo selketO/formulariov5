@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Solicitud de Cambio de Rubro</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="./css/rubros.css">
 </head>
+
 <body>
     <div class="header">
         <img src="/img/LOGO BCL H.png" alt="Logo">
-        <h1>Solicitud de Cambio de Rubro</h1>    
+        <h1>Solicitud de Cambio de Rubro</h1>
         <button class="button" onclick="location.href='Reporte.html'">Ir a los Rubros</button>
     </div>
     <form id="formRubros">
@@ -43,23 +45,85 @@
         </div>
 
         <div class="form-group">
-            <label for="applicant">Solicitante:</label>
-            <select id="applicant">
-                <option value="">Seleccionar Solicitante</option>
-                <option value="francisco@biancorelab.com">Francisco Macias</option>
-                <option value="edelgado@biancorelab.com">Edhson Delgado</option>
-                <option value="cloera@biancorelab.com">Christian Loera</option>
-                <option value="carlos@biancorelab.com">Carlos Ancona</option>
-                <option value="luis@biancorelab.com">Luis Ceballos</option>
-            </select>
+            <input class="field-input" id="applicant" name="applicant" required>
         </div>
-        
+
         <button type="submit">Enviar Solicitud</button>
     </form>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     <script>
-        $(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function () {
+    const urlToken = getTokenFromUrl();
+    const storedToken = sessionStorage.getItem("authToken");
+
+    if (urlToken) {
+        sessionStorage.setItem("authToken", urlToken);
+        validateTokenAndProceed(urlToken);
+    } else if (storedToken) {
+        validateTokenAndProceed(storedToken);
+    } else {
+        redirectToLogin();
+    }
+});
+
+function getTokenFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('token');
+}
+
+function parseJwt(token) {
+    try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        console.error("Error parsing JWT: ", e);
+        return null;
+    }
+}
+
+function redirectToLogin() {
+    window.location.href = 'https://login-teal-three.vercel.app/';
+}
+
+function validateTokenAndProceed(token) {
+    fetch('https://sesiones-back.onrender.com/validate-token', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else {
+            redirectToLogin();
+            throw new Error('Failed to validate token');
+        }
+    })
+    .then(data => {
+        const userDetails = parseJwt(token);
+        if (userDetails && userDetails.username) {
+            sessionStorage.setItem("userEmail", userDetails.username);
+            sessionStorage.setItem("userName", userDetails.name);
+            document.getElementById('applicant').value = userDetails.username;
+            console.log('Access granted', data.user);
+        } else {
+            redirectToLogin();
+        }
+    })
+    .catch(error => {
+        console.error(error);
+        redirectToLogin();
+    });
+}
+
+
+        $(document).ready(function () {
 
             $('.select2').select2();
             const actualizaSaldos = () => {
@@ -67,7 +131,7 @@
                 const destinoId = $('#rubroDestino').val();
 
                 if (origenId && destinoId) {
-                    $.get(`/api/saldos?origen=${origenId}&destino=${destinoId}`, function(data) {
+                    $.get(`/api/saldos?origen=${origenId}&destino=${destinoId}`, function (data) {
                         if (data.origen && data.destino) {
                             $('#saldoOrigen').text(numberWithCommas(data.origen.Acumulado));
                             $('#saldoDestino').text(numberWithCommas(data.destino.Acumulado));
@@ -79,7 +143,7 @@
                             $('#saldoFinalOrigen').text(numberWithCommas(saldoFinalOrigen));
                             $('#saldoFinalDestino').text(numberWithCommas(saldoFinalDestino));
                         }
-                    }).fail(function(error) {
+                    }).fail(function (error) {
                         console.error('Error al obtener los saldos', error);
                     });
                 }
@@ -89,14 +153,15 @@
                 return x.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             }
 
-            $.get('/api/rubros', function(rubros) {
-                rubros.forEach(function(rubro) {
+            $.get('/api/rubros', function (rubros) {
+                rubros.sort((a, b) => a.Concepto.localeCompare(b.Concepto));
+                rubros.forEach(function (rubro) {
                     $('#rubroOrigen, #rubroDestino').append(new Option(rubro.Concepto, rubro._id));
                 });
                 actualizaSaldos();
             });
 
-            $('#rubroOrigen').change(function() {
+            $('#rubroOrigen').change(function () {
                 const origenId = $(this).val();
                 $('#rubroDestino option').prop('disabled', false);
                 $('#rubroDestino option[value="' + origenId + '"]').prop('disabled', true);
@@ -104,7 +169,7 @@
                 actualizaSaldos();
             });
 
-            $('#rubroDestino').change(function() {
+            $('#rubroDestino').change(function () {
                 const destinoId = $(this).val();
                 $('#rubroOrigen option').prop('disabled', false);
                 $('#rubroOrigen option[value="' + destinoId + '"]').prop('disabled', true);
@@ -114,7 +179,7 @@
 
             $('#cantidadTransferir').on('input', actualizaSaldos);
 
-            $('#formRubros').submit(function(e) {
+            $('#formRubros').submit(function (e) {
                 e.preventDefault();
                 const origen = $('#rubroOrigen').val();
                 const destino = $('#rubroDestino').val();
@@ -130,11 +195,11 @@
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({ origen, destino, cantidad, applicant }),
-                    success: function(response) {
+                    success: function (response) {
                         alert('Transferencia realizada: ' + response.message);
                         actualizaSaldos();
                     },
-                    error: function(jqXHR, textStatus, errorThrown) {
+                    error: function (jqXHR, textStatus, errorThrown) {
                         alert('Error en la transferencia: el rubro de origen no puede quedar en negativo' + textStatus);
                     }
                 });
@@ -142,4 +207,5 @@
         });
     </script>
 </body>
+
 </html>

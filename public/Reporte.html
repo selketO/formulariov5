@@ -12,6 +12,7 @@
 </head>
 <body>
   <div class="container py-5">
+    <div hidden><h1>Hola <span id="username"></span>, bienvenido a BCL Management</h1></div>
     <h1 class="text-center">Reporte de Rubros</h1>
 
     <div class="mb-4">
@@ -48,14 +49,149 @@
   </div>
 
   <script>
+    function getTokenFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('token');
+    }
+
+    function parseJwt(token) {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (e) {
+            console.error("Error parsing JWT: ", e);
+            return null;
+        }
+    }
+
+    function redirectToLogin() {
+        window.location.href = 'https://login-teal-three.vercel.app/';
+    }
+   const personas = [
+    { nombre: "Edhson Delgado", roles: ["admin"], correo: "edelgado@biancorelab.com" },
+    { nombre: "Mayra Acevedo", categoria: ["GGRAL"], correo: "macevedo@biancorelab.com" },
+    { nombre: "Julio Lopez", categoria: ["GGRAL"], correo: "jlopez@biancorelab.com" },
+    { nombre: "Juana Hernandez", categoria: ["GGRAL"], correo: "jhernandez@biancorelab.com" },
+    { nombre: "Valeria Gonzalez", categoria: ["GGRAL"], correo: "vgonzalez@biancorelab.com" },
+    { nombre: "Christian Loera", roles: ["admin"], correo: "cloera@biancorelab.com" },
+    { nombre: "Luis Ceballos", roles: ["admin"], correo: "luis@biancorelab.com" },
+    { nombre: "Carlos Ancona", roles: ["admin"], correo: "carlos@biancorelab.com" },
+    { nombre: "Teresa Gallo", categoria: ["GGRAL"], correo: "tgallo@biancorelab.com" },
+    { nombre: "Teresita Alejo", categoria: ["GGRAL"], correo: "talejo@biancorelab.com" },
+    { nombre: "Mariana Rivas", categoria: ["GGVTA"], correo: "mrivas@biancorelab.com" },
+    { nombre: "Jesus Macias", categoria: ["GGVTA"], correo: "jmacias@biancorelab.com" },
+    { nombre: "Esperanza Rivera", categoria: ["GGVTA"], correo: "erivera@biancorelab.com" },
+    { nombre: "Felipe Pech", categoria: ["GTMKT"], correo: "fpech@biancorelab.com" },
+    { nombre: "Eduardo Angel", categoria: ["GGVTA"], correo: "eangel@biancorelab.com" },
+    { nombre: "Francisco Macias", roles: ["admin"], correo: "fmacias@biancorelab.com" },
+    { nombre: "Alondra Gonzalez", categoria: ["GID Y GMKT"], correo: "agonzalez@biancorelab.com" },
+    { nombre: "Jashia Perez", categoria: ["GMKT"], correo: "jperez@biancorelab.com" },
+    { nombre: "Fernando Vargas", categoria: ["GVTA"], correo: "fvargas@biancorelab.com" },
+    { nombre: "Eliu Cortes", categoria: ["GTMKT"], correo: "ecortes@biancorelab.com" },
+    { nombre: "Pedro Mora", categoria: ["GTMKT"], correo: "pmora@biancorelab.com" },
+    { nombre: "Diana Castillo", categoria: ["GTMKT"], correo: "dcastillo@biancorelab.com" },
+    { nombre: "Fulgencia Lorenzo", categoria: ["GTMKT"], correo: "florenzo@biancorelab.com" },
+    { nombre: "Jakeline Lozada", categoria: ["GTMKT"], correo: "jlozada@biancorelab.com" },
+    { nombre: "Claudia Abad", categoria: ["GTMKT"], correo: "cabad@biancorelab.com" },
+    { nombre: "Gabriela Flores", categoria: ["GTMKT"], correo: "gflores@biancorelab.com" },
+    { nombre: "Silvia Villegas", categoria: ["GTMKT"], correo: "svillegas@biancorelab.com" },
+    { nombre: "Selene Vazquez", categoria: ["GTMKT"], correo: "svazquez@biancorelab.com" },
+    { nombre: "Magdalena Vargas", categoria: ["GTMKT"], correo: "mvargas@biancorelab.com" },
+    { nombre: "Lourdes Hernandez", categoria: ["GTMKT"], correo: "lhernandez@biancorelab.com" },
+    { nombre: "Alma Gonzalez", categoria: ["GTMKT"], correo: "agonzalez@biancorelab.com" },
+    { nombre: "Angelica Alvarez", categoria: ["GTMKT"], correo: "aalvarez@biancorelab.com" },
+    { nombre: "Lizbeth Mateos", categoria: ["GTMKT"], correo: "lmateos@biancorelab.com" },
+    { nombre: "Patricia Arias", categoria: ["GTMKT"], correo: "parias@biancorelab.com" },
+    { nombre: "Vanesa Canton", categoria: ["GTMKT"], correo: "vcanton@biancorelab.com" },
+    { nombre: "Edgar Salgado", categoria: ["GTMKT"], correo: "esalgado@biancorelab.com" }
+];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const token = getTokenFromUrl();
+    if (token) {
+        sessionStorage.setItem("authToken", token);
+    }
+    const storedToken = sessionStorage.getItem("authToken");
+    if (!storedToken) {
+        redirectToLogin();
+    } else {
+        const tokenToUse = token || storedToken;
+        const userDetails = parseJwt(tokenToUse);
+        if (userDetails && userAuthorized(userDetails.username)) {
+            document.getElementById('username').innerText = userDetails.name || 'Usuario';
+            validateTokenAndProceed(tokenToUse);
+        } else {
+            redirectToLogin();
+        }
+    }
+    setupAreaFilter();
+});
+
+    function userAuthorized(userEmail) {
+    const user = personas.find(persona => persona.correo === userEmail);
+    if (user) {
+        if (user.roles && user.roles.includes("admin")) {
+            sessionStorage.setItem("userCategories", JSON.stringify(["ALL"]));  // 'ALL' o simplemente almacenar el rol y verificar luego
+        } else {
+            sessionStorage.setItem("userCategories", JSON.stringify(user.categoria));
+        }
+        return true;
+    }
+    return false;
+}
+
+    function validateTokenAndProceed(token) {
+        fetch('https://sesiones-back.onrender.com/validate-token', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                redirectToLogin();
+                throw new Error('Failed to validate token');
+            }
+        })
+        .then(data => {
+            console.log('Access granted', data.user);
+            fetch('/api/report-data')
+                .then(response => response.json())
+                .then(data => fillTable(data))
+                .catch(error => console.error('Error al obtener los datos:', error));
+        })
+        .catch(error => {
+            console.error(error);
+            redirectToLogin();
+        });
+    }
+
     let totalPresupuestoAll = 0;
     let totalRealAll = 0;
     let totalDiferenciaAll = 0;
 
-    // Función para llenar la tabla con los datos
     function fillTable(data) {
-      const tableBody = document.querySelector('tbody');
-      tableBody.innerHTML = '';
+    // Asegúrate de obtener 'userCategories' desde 'sessionStorage'
+    const userCategories = JSON.parse(sessionStorage.getItem("userCategories"));
+    // Agregar una verificación para asegurar que userCategories siempre tenga un valor antes de usarlo
+    if (!userCategories) {
+        console.error("No se pudieron recuperar las categorías de usuario desde sessionStorage.");
+        return;  // Salir de la función si no hay categorías disponibles
+    }
+    
+    // Si userCategories incluye "ALL", permitir todos los datos, de lo contrario, filtrar por las áreas permitidas
+    const hasAllAccess = userCategories.includes("ALL");
+
+    data = data.filter(item => hasAllAccess || userCategories.includes(item.Area));
+
+    const tableBody = document.querySelector('tbody');
+    tableBody.innerHTML = '';
 
       totalPresupuestoAll = 0;
       totalRealAll = 0;
@@ -141,50 +277,62 @@
       document.querySelector('#totalDiferencia').textContent = formatNumber(totalDiferenciaAll.toFixed(2));
       document.querySelector('#totalDiferenciaPercent').textContent = `${((totalDiferenciaAll / totalPresupuestoAll) * 100).toFixed(2)}%`;
     }
+    function setupAreaFilter() {
+    const userCategories = JSON.parse(sessionStorage.getItem("userCategories")) || [];
+    const areaFilter = document.querySelector('#areaFilter');
+    areaFilter.innerHTML = '<option value="">Todas las áreas</option>'; // Asegura que la lista empieza limpia.
+    userCategories.forEach(area => {
+        const option = document.createElement('option');
+        option.value = area;
+        option.text = area;
+        areaFilter.appendChild(option); // Añade cada área a la lista desplegable.
+    });
+}
 
     // Función para filtrar la tabla
     function filterTable() {
-      const searchInput = document.querySelector('#searchInput').value.toLowerCase();
-      const areaFilter = document.querySelector('#areaFilter').value;
+    const searchInput = document.querySelector('#searchInput').value.toLowerCase();
+    const areaFilter = document.querySelector('#areaFilter').value;
+    const userCategories = JSON.parse(sessionStorage.getItem("userCategories")) || [];
 
-      const tableRows = document.querySelectorAll('tbody tr');
-      let totalPresupuestoVisible = 0;
-      let totalRealVisible = 0;
-      let totalDiferenciaVisible = 0;
+    const tableRows = document.querySelectorAll('tbody tr');
+    let totalPresupuestoVisible = 0;
+    let totalRealVisible = 0;
+    let totalDiferenciaVisible = 0;
 
-      tableRows.forEach(row => {
+    tableRows.forEach(row => {
         const concepto = row.cells[0].textContent.toLowerCase();
         const area = row.cells[1].textContent;
 
-        const showRow = concepto.includes(searchInput) && (areaFilter === '' || area === areaFilter);
+        // Ajustar la lógica de filtrado para considerar múltiples áreas del usuario
+        const showRow = concepto.includes(searchInput) && 
+                        (areaFilter === '' || area === areaFilter || userCategories.includes(area));
         row.style.display = showRow ? '' : 'none';
+
         if (showRow) {
-          totalPresupuestoVisible += parseFloat(row.cells[2].textContent.replace(/,/g, ''));
-          totalRealVisible += parseFloat(row.cells[3].textContent.replace(/,/g, ''));
-          totalDiferenciaVisible += parseFloat(row.cells[4].textContent.replace(/,/g, ''));
+            totalPresupuestoVisible += parseFloat(row.cells[2].textContent.replace(/,/g, ''));
+            totalRealVisible += parseFloat(row.cells[3].textContent.replace(/,/g, ''));
+            totalDiferenciaVisible += parseFloat(row.cells[4].textContent.replace(/,/g, ''));
         }
-      });
+    });
 
-      document.querySelector('#totalPresupuesto').textContent = formatNumber(totalPresupuestoVisible.toFixed(2));
-      document.querySelector('#totalReal').textContent = formatNumber(totalRealVisible.toFixed(2));
-      document.querySelector('#totalDiferencia').textContent = formatNumber(totalDiferenciaVisible.toFixed(2));
-      document.querySelector('#totalDiferenciaPercent').textContent = `${((totalDiferenciaVisible / totalPresupuestoVisible) * 100).toFixed(2)}%`;
+    document.querySelector('#totalPresupuesto').textContent = formatNumber(totalPresupuestoVisible.toFixed(2));
+    document.querySelector('#totalReal').textContent = formatNumber(totalRealVisible.toFixed(2));
+    document.querySelector('#totalDiferencia').textContent = formatNumber(totalDiferenciaVisible.toFixed(2));
+    document.querySelector('#totalDiferenciaPercent').textContent = `${((totalDiferenciaVisible / totalPresupuestoVisible) * 100).toFixed(2)}%`;
 
-      if (searchInput === '' && areaFilter === '') {
+    if (searchInput === '' && areaFilter === '') {
         updateTotal();
-      }
     }
+}
+
 
     // Función para formatear números con comas y puntos
     function formatNumber(number) {
       return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    // Llamar a la función fillTable con los datos obtenidos del servidor
-    fetch('/api/report-data')
-      .then(response => response.json())
-      .then(data => fillTable(data))
-      .catch(error => console.error('Error al obtener los datos:', error));
+
   </script>
 </body>
 </html>
