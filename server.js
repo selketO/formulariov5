@@ -10,7 +10,13 @@ const admin = require('firebase-admin');
 const cors = require('cors');
 app.use(cors());
 app.use(express.json()); // para parsing application/json
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+    }
+}));
 const serviceAccount = require('./formulario-if---ft-firebase-adminsdk-u9bim-fd525dbea7.json');
 const { v4: uuidv4 } = require('uuid');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -44,61 +50,47 @@ app.get('/', (req, res) => {
 app.post('/enviar-formulario', async (req, res) => {
     const { firma, correo, correoAplicant, Mount, applicant, area, productService, quantity, credit, expenseAmount, provider, budgetItem, paymentForm, description, date, folio } = req.body;
 
-    // Crear un documento PDF en memoria
     const doc = new PDFDocument();
     const pdfBuffers = [];
-    // Define constants for layout
     const margin = 50;
     const pageWidth = doc.page.width - 2 * margin;
     const lineHeight = 14;
     const imagePath = path.join(__dirname, "public", "img", "LOGO BCL H.png");
 
-    doc.image(imagePath, margin, 40, { width: 150 }); // Ajusta la posición y el tamaño según sea necesario
+    doc.image(imagePath, margin, 40, { width: 150 });
 
-    // Mover la posición vertical para el título debajo de la imagen del logo
-    let yPos = 120; // Esto coloca el título justo debajo de la imagen del logo
+    let yPos = 120;
 
-
-
-    // Title of the form
     doc.fontSize(16)
         .font('Helvetica-Bold')
         .text('Formato de Requisición', margin, yPos - 30, { align: 'center' });
 
-    // Agregar el número de folio y la fecha a la derecha de la cabecera
     doc.fontSize(10)
         .font('Helvetica')
         .text(`# Folio: ${folio}`, pageWidth + margin - 150, yPos - 30, { width: 140, align: 'right' })
         .text(`Fecha: ${date}`, pageWidth + margin - 150, yPos - 15, { width: 140, align: 'right' });
 
-    // Mover la posición vertical para el cuerpo del formulario
     yPos += 50;
 
-
-    // Función para añadir campos de formulario
     function addFormField(label, value, y, xOffset = 150) {
-        const fieldHeight = 15; // Altura del campo de texto
-        const fieldPadding = 2; // Espacio adicional para que el texto no toque los bordes del rectángulo
+        const fieldHeight = 15;
+        const fieldPadding = 2;
         const valueWidth = pageWidth - (margin + xOffset);
 
-        // Dibujar el rectángulo de fondo para el valor
         doc.rect(margin + xOffset, y + fieldPadding, valueWidth, fieldHeight)
-            .fillOpacity(0.5) // Puedes ajustar la opacidad según necesites
-            .fillAndStroke('grey', 'grey'); // El relleno y el borde del rectángulo
+            .fillOpacity(0.5)
+            .fillAndStroke('grey', 'grey');
 
-        // Resetear la opacidad para el texto
         doc.fillOpacity(1);
 
-        // Imprime el título
         doc.font('Helvetica').fontSize(10).fillColor('black');
         doc.text(label, margin, y, { width: 240, align: 'left' });
 
-        // Imprime el valor con un poco de padding dentro del rectángulo
         doc.text(value || '', margin + xOffset + fieldPadding, y + fieldPadding, { width: valueWidth - (2 * fieldPadding), align: 'left' });
 
-        yPos += fieldHeight + (2 * fieldPadding); // Añadir espacio vertical después de cada campo
+        yPos += fieldHeight + (2 * fieldPadding);
     }
-    // Añadir los campos de formulario
+
     addFormField('Solicitante (Operador):', applicant, yPos);
     addFormField('Área:', area, yPos);
     addFormField('Producto o Servicio:', productService, yPos);
@@ -111,11 +103,8 @@ app.post('/enviar-formulario', async (req, res) => {
     addFormField('Días de crédito:', credit.toString(), yPos);
     addFormField('Rubro Presupuestal:', budgetItem, yPos);
 
-    // Add extra space for the last field before signatures
     yPos += lineHeight * 2;
 
-
-    // Aquí agregarías el contenido a tu PDF, como se hizo anteriormente
     doc.fontSize(25).text('', 100, 80);
 
     doc.on('data', chunk => pdfBuffers.push(chunk));
@@ -132,193 +121,190 @@ app.post('/enviar-formulario', async (req, res) => {
             const formData = { ...req.body, pdfId: pdfId.toString() };
             const uniqueToken = uuidv4();
 
-            // Guarda los datos del formulario con el token en Firestore
             await db.collection('solicitudesPendientes').doc(uniqueToken).set(formData);
+
             let transporter = nodemailer.createTransport({
                 host: process.env.EMAIL_HOST,
                 port: parseInt(process.env.EMAIL_PORT, 10),
-                secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
+                secure: process.env.EMAIL_SECURE === 'true',
                 auth: {
                     user: process.env.EMAIL_USER,
                     pass: process.env.EMAIL_PASS,
                 },
             });
-    
 
             const authorizationLink = `https://formulariov3.onrender.com/autorizar-formulario/${uniqueToken}`;
             const noAuthorizationLink = `https://formulariov3.onrender.com/no-autorizar-formulario/${uniqueToken}`;
-        const htmlEmailContent = `
-      <!DOCTYPE html>
-      <html lang="es">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-              body {
-                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                  color: #333;
-                  line-height: 1.6;
-              }
-              .email-container {
-                  max-width: 600px;
-                  margin: 20px auto;
-                  padding: 20px;
-                  border: 1px solid #ddd;
-                  border-radius: 5px;
-              }
-              .header {
-                  text-align: left;
-                  border-bottom: 2px solid #005687;
-                  padding-bottom: 10px;
-                  margin-bottom: 20px;
-              }
-              .email-content {
-                  text-align: left;
-                  margin-top: 20px;
-              }
-              .footer {
-                  text-align: center;
-                  margin-top: 30px;
-                  padding-top: 10px;
-                  font-size: 0.8em;
-                  color: #888;
-              }
-              .button {
-                  padding: 10px 20px;
-                  margin: 10px 5px;
-                  color: white;
-                  border: none;
-                  border-radius: 5px;
-                  cursor: pointer;
-                  text-decoration: none;
-              }
-              .authorize {
-                  background-color: #28a745;
-              }
-              .decline {
-                  background-color: #dc3545;
-              }
-              .button-container {
-                  text-align: center;
-              }
-          </style>
-      </head>
-      <body>
-          <div class="email-container">
-              <div class="header">
-                  <img src="cid:logoBCLH" alt="Logo" style="max-width: 150px;">
-              </div>
-              <div class="email-content">
-                  <p>Estimado/a ${formData.correo},</p>
-                  <p>Por favor, autorice el gasto de <strong>${formData.productService}</strong>, por un monto de <strong>${formData.expenseAmount}</strong> correspondiente a la partida presupuestal <strong>${formData.budgetItem}</strong>. Encuentra los detalles adjuntos. Gracias.</p>
-                  <p>Saludos cordiales,<br>${formData.applicant}</p>
-              </div>
-              <table width="100%" cellspacing="0" cellpadding="0">
-              <tr>
-                <td>
-                  <table cellspacing="0" cellpadding="0" align="left">
-                    <tr>
-                      <td align="center" width="200" height="40" bgcolor="#28a745" style="border-radius: 5px;">
-                        <a href="${authorizationLink}" target="_blank" style="font-size: 16px; font-family: sans-serif; color: #ffffff; text-decoration: none; line-height:40px; display: inline-block;">
-                          Autorizar
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-            
-                  <table cellspacing="0" cellpadding="0" align="right">
-                    <tr>
-                      <td align="center" width="200" height="40" bgcolor="#dc3545" style="border-radius: 5px;">
-                        <a href="${noAuthorizationLink}" target="_blank" style="font-size: 16px; font-family: sans-serif; color: #ffffff; text-decoration: none; line-height:40px; display: inline-block;">
-                          No Autorizar
-                        </a>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-              <div class="footer">
-                  <p>Este es un mensaje automático, por favor no responder directamente.</p>
-              </div>
-          </div>
-      </body>
-      </html>
-      `;
-      const cancelLink = `https://formulariov3.onrender.com/cancelar-formulario/${uniqueToken}`;
-      const htmlEmailContentCancel = `
-          <!DOCTYPE html>
-          <html lang="es">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <style>
-                  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
-                  .email-container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
-                  .button { padding: 10px 20px; color: white; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; background-color: #dc3545; }
-              </style>
-          </head>
-          <body>
-              <div class="email-container">
-                  <p>Hola ${applicant},</p>
-                  <p>Has enviado una solicitud con el siguiente detalle:</p>
-                  <p><strong>Producto o Servicio:</strong> ${productService}</p>
-                  <p><strong>Monto Total:</strong> ${Mount}</p>
-                  <p><strong>Descripción:</strong> ${description}</p>
-                  <p>Si necesitas cancelar esta solicitud, por favor haz clic en el siguiente botón:</p>
-                  <a href="${cancelLink}" class="button">Cancelar Solicitud</a>
-              </div>
-          </body>
-          </html>
-      `;
+            const htmlEmailContent = `
+              <!DOCTYPE html>
+              <html lang="es">
+              <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <style>
+                      body {
+                          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                          color: #333;
+                          line-height: 1.6;
+                      }
+                      .email-container {
+                          max-width: 600px;
+                          margin: 20px auto;
+                          padding: 20px;
+                          border: 1px solid #ddd;
+                          border-radius: 5px;
+                      }
+                      .header {
+                          text-align: left;
+                          border-bottom: 2px solid #005687;
+                          padding-bottom: 10px;
+                          margin-bottom: 20px;
+                      }
+                      .email-content {
+                          text-align: left;
+                          margin-top: 20px;
+                      }
+                      .footer {
+                          text-align: center;
+                          margin-top: 30px;
+                          padding-top: 10px;
+                          font-size: 0.8em;
+                          color: #888;
+                      }
+                      .button {
+                          padding: 10px 20px;
+                          margin: 10px 5px;
+                          color: white;
+                          border: none;
+                          border-radius: 5px;
+                          cursor: pointer;
+                          text-decoration: none;
+                      }
+                      .authorize {
+                          background-color: #28a745;
+                      }
+                      .decline {
+                          background-color: #dc3545;
+                      }
+                      .button-container {
+                          text-align: center;
+                      }
+                  </style>
+              </head>
+              <body>
+                  <div class="email-container">
+                      <div class="header">
+                          <img src="cid:logoBCLH" alt="Logo" style="max-width: 150px;">
+                      </div>
+                      <div class="email-content">
+                          <p>Estimado/a ${formData.correo},</p>
+                          <p>Por favor, autorice el gasto de <strong>${formData.productService}</strong>, por un monto de <strong>${formData.expenseAmount}</strong> correspondiente a la partida presupuestal <strong>${formData.budgetItem}</strong>. Encuentra los detalles adjuntos. Gracias.</p>
+                          <p>Saludos cordiales,<br>${formData.applicant}</p>
+                      </div>
+                      <table width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td>
+                          <table cellspacing="0" cellpadding="0" align="left">
+                            <tr>
+                              <td align="center" width="200" height="40" bgcolor="#28a745" style="border-radius: 5px;">
+                                <a href="${authorizationLink}" target="_blank" style="font-size: 16px; font-family: sans-serif; color: #ffffff; text-decoration: none; line-height:40px; display: inline-block;">
+                                  Autorizar
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                    
+                          <table cellspacing="0" cellpadding="0" align="right">
+                            <tr>
+                              <td align="center" width="200" height="40" bgcolor="#dc3545" style="border-radius: 5px;">
+                                <a href="${noAuthorizationLink}" target="_blank" style="font-size: 16px; font-family: sans-serif; color: #ffffff; text-decoration: none; line-height:40px; display: inline-block;">
+                                  No Autorizar
+                                </a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                      <div class="footer">
+                          <p>Este es un mensaje automático, por favor no responder directamente.</p>
+                      </div>
+                  </div>
+              </body>
+              </html>
+              `;
+            const cancelLink = `https://formulariov3.onrender.com/cancelar-formulario/${uniqueToken}`;
+            const htmlEmailContentCancel = `
+                  <!DOCTYPE html>
+                  <html lang="es">
+                  <head>
+                      <meta charset="UTF-8">
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                      <style>
+                          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; }
+                          .email-container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+                          .button { padding: 10px 20px; color: white; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; background-color: #dc3545; }
+                      </style>
+                  </head>
+                  <body>
+                      <div class="email-container">
+                          <p>Hola ${applicant},</p>
+                          <p>Has enviado una solicitud con el siguiente detalle:</p>
+                          <p><strong>Producto o Servicio:</strong> ${productService}</p>
+                          <p><strong>Monto Total:</strong> ${Mount}</p>
+                          <p><strong>Descripción:</strong> ${description}</p>
+                          <p>Si necesitas cancelar esta solicitud, por favor haz clic en el siguiente botón:</p>
+                          <a href="${cancelLink}" class="button">Cancelar Solicitud</a>
+                      </div>
+                  </body>
+                  </html>
+              `;
 
-      transporter.sendMail({
-          from: process.env.EMAIL_FROM, // Tu dirección de correo "From"
-          to: correoAplicant, // Correo del solicitante
-          subject: 'Detalles de tu solicitud de formulario',
-          html: htmlEmailContentCancel
-      }).then(info => {
-          console.log('Correo enviado:', info.response);
-          res.send('Detalles de la solicitud enviados con éxito al solicitante.');
-      }).catch(error => {
-          console.error('Error al enviar correo:', error);
-          res.status(500).send('Error al enviar correo al solicitante.');
-      });
-        transporter.sendMail({
-            from: process.env.EMAIL_FROM, // Agrega tu dirección de correo "From"
-            to: formData.correo, // Suponiendo que `correo` es el correo del autorizador
-            subject: 'Autorización de Solped Requerida',
-            html: htmlEmailContent,
-            attachments: [
-                {
-                    filename: 'Formulario-Autorizado.pdf', // Nombre descriptivo
-                    content: pdfBuffer, // Ruta al archivo PDF
-                    contentType: 'application/pdf'
-                },
-                {
-                    filename: 'LOGO BCL H.png',
-                    path: path.join(__dirname, "public", "img", "LOGO BCL H.png"),
-                    cid: 'logoBCLH' // Este CID se usa en el src del img tag en el HTML
-                }
-            ]
-        }).then(info => {
-            console.log('Correo enviado:', info.response);
-            res.send('Correo de autorización enviado con éxito.');
-        }).catch(error => {
-            console.error('Error al enviar correo de autorización:', error);
-            res.status(500).send('Error al enviar correo de autorización.');
-        });
+            try {
+                // Enviar el primer correo
+                await transporter.sendMail({
+                    from: '"BCL Management" <' + process.env.EMAIL_FROM + '>',
+                    to: correoAplicant,
+                    subject: 'Detalles de tu solicitud de formulario',
+                    html: htmlEmailContentCancel
+                });
 
-    } catch (error) {
-        console.error('Error al guardar el PDF en MongoDB:', error);
-        res.status(500).send('Error al guardar el PDF en MongoDB.');
-    }
+                // Enviar el segundo correo
+                await transporter.sendMail({
+                    from: '"BCL Management" <' + process.env.EMAIL_FROM + '>',
+                    to: formData.correo,
+                    subject: 'Autorización de Solped Requerida',
+                    html: htmlEmailContent,
+                    attachments: [
+                        {
+                            filename: 'Formulario-Autorizado.pdf',
+                            content: pdfBuffer,
+                            contentType: 'application/pdf'
+                        },
+                        {
+                            filename: 'LOGO BCL H.png',
+                            path: path.join(__dirname, "public", "img", "LOGO BCL H.png"),
+                            cid: 'logoBCLH'
+                        }
+                    ]
+                });
+
+                res.send('Correos enviados con éxito.');
+
+            } catch (error) {
+                console.error('Error al enviar correos:', error);
+                res.status(500).send('Error al enviar correos.');
+            }
+
+        } catch (error) {
+            console.error('Error al guardar el PDF en MongoDB:', error);
+            res.status(500).send('Error al guardar el PDF en MongoDB.');
+        }
+    });
+
+    doc.end();
 });
 
-// ... Generación del contenido del PDF
-// No olvides eliminar cualquier referencia a pdfPath y stream, ya que ya no son necesarios
-doc.end();
-});
 //--------------------------------------------------------------------------------------------------------Auutorizar-------------------------------------------------------------------------------------------
 app.get('/autorizar-formulario/:token', async (req, res) => {
     const { token } = req.params;

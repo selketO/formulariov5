@@ -1,338 +1,384 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="./css/reporte.css">
-  <title>Reporte de Datos</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
-</head>
-<body>
-  <div class="container py-5">
-    <div hidden><h1>Hola <span id="username"></span>, bienvenido a BCL Management</h1></div>
-    <h1 class="text-center">Reporte de Rubros</h1>
 
-    <div class="mb-4">
-      <input type="text" class="form-control" id="searchInput" placeholder="Buscar concepto..." oninput="filterTable()">
-      <select class="form-control" id="areaFilter" onchange="filterTable()">
-        <option value="">Todas las áreas</option>
-      </select>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./css/reporte.css">
+    <title>Reporte de Datos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+</head>
+
+<body>
+    <div class="container py-5">
+        <div hidden>
+            <h1>Hola <span id="username"></span>, bienvenido a BCL Management</h1>
+        </div>
+<div class="header">
+ <img class="logo" src="/img/BCL MGM.png" alt="Logo">
+
+    <h1 class="text-center">Reporte de presupuesto</h1>
+</div>
+
+        <div class="mb-4">
+            <input type="text" class="form-control" id="searchInput" placeholder="Buscar concepto..."
+                oninput="filterTable()">
+            <select class="form-control" id="areaFilter" onchange="filterTable()">
+                <option value="">Todas las áreas</option>
+            </select>
+        </div>
+
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr>
+                    <th>Concepto</th>
+                    <th>Área</th>
+                    <th>Presupuesto</th>
+                    <th>Real</th>
+                    <th>Diferencia ($)</th>
+                    <th>Diferencia (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Los datos se insertarán aquí -->
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2">Total</td>
+                    <td id="totalPresupuesto">0</td>
+                    <td id="totalReal">0</td>
+                    <td id="totalDiferencia">$0</td>
+                    <td id="totalDiferenciaPercent">0.00%</td>
+                </tr>
+            </tfoot>
+        </table>
     </div>
 
-    <table class="table table-striped table-bordered">
-      <thead>
-        <tr>
-          <th>Concepto</th>
-          <th>Área</th>
-          <th>Presupuesto</th>
-          <th>Real</th>
-          <th>Diferencia ($)</th>
-          <th>Diferencia (%)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Los datos se insertarán aquí -->
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="2">Total</td>
-          <td id="totalPresupuesto">0</td>
-          <td id="totalReal">0</td>
-          <td id="totalDiferencia">$0</td>
-          <td id="totalDiferenciaPercent">0.00%</td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
-
-  <script>
-    function getTokenFromUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('token');
-    }
-
-    function parseJwt(token) {
-        try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        } catch (e) {
-            console.error("Error parsing JWT: ", e);
-            return null;
+    <script>
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token');
         }
-    }
 
-    function redirectToLogin() {
-        window.location.href = 'https://login-teal-three.vercel.app/';
-    }
-   const personas = [
-    { nombre: "Edhson Delgado", roles: ["admin"], correo: "edelgado@biancorelab.com" },
-    { nombre: "Mayra Acevedo", categoria: ["GGRAL"], correo: "macevedo@biancorelab.com" },
-    { nombre: "Julio Lopez", categoria: ["GGRAL"], correo: "jlopez@biancorelab.com" },
-    { nombre: "Juana Hernandez", categoria: ["GGRAL"], correo: "jhernandez@biancorelab.com" },
-    { nombre: "Valeria Gonzalez", categoria: ["admin"], correo: "cobranza@biancorelab.com" },
-    { nombre: "Christian Loera", roles: ["admin"], correo: "cloera@biancorelab.com" },
-    { nombre: "Luis Ceballos", roles: ["admin"], correo: "luis@biancorelab.com" },
-    { nombre: "Carlos Ancona", roles: ["admin"], correo: "carlos@biancorelab.com" },
-    { nombre: "Teresa Gallo", categoria: ["GGRAL"], correo: "tgallo@biancorelab.com" },
-    { nombre: "Teresita Alejo", categoria: ["GGRAL"], correo: "talejo@biancorelab.com" },
-    { nombre: "Mariana Rivas", categoria: ["GGVTA"], correo: "mrivas@biancorelab.com" },
-    { nombre: "Jesus Macias", categoria: ["GGVTA"], correo: "jmacias@biancorelab.com" },
-    { nombre: "Esperanza Rivera", categoria: ["GGVTA"], correo: "erivera@biancorelab.com" },
-    { nombre: "Felipe Pech", categoria: ["GTMKT"], correo: "fpech@biancorelab.com" },
-    { nombre: "Eduardo Angel", categoria: ["GGVTA"], correo: "eangel@biancorelab.com" },
-    { nombre: "Francisco Macias", roles: ["admin"], correo: "fmacias@biancorelab.com" },
-    { nombre: "Alondra Gonzalez", categoria: ["GID Y GMKT"], correo: "agonzalez@biancorelab.com" },
-    { nombre: "Jashia Perez", categoria: ["GMKT"], correo: "jperez@biancorelab.com" },
-    { nombre: "Fernando Vargas", categoria: ["GVTA"], correo: "fvargas@biancorelab.com" },
-    { nombre: "Eliu Cortes", categoria: ["GTMKT"], correo: "ecortes@biancorelab.com" },
-    { nombre: "Pedro Mora", categoria: ["GTMKT"], correo: "pmora@biancorelab.com" },
-    { nombre: "Diana Castillo", categoria: ["GTMKT"], correo: "dcastillo@biancorelab.com" },
-    { nombre: "Fulgencia Lorenzo", categoria: ["GTMKT"], correo: "florenzo@biancorelab.com" },
-    { nombre: "Jakeline Lozada", categoria: ["GTMKT"], correo: "jlozada@biancorelab.com" },
-    { nombre: "Claudia Abad", categoria: ["GTMKT"], correo: "cabad@biancorelab.com" },
-    { nombre: "Gabriela Flores", categoria: ["GTMKT"], correo: "gflores@biancorelab.com" },
-    { nombre: "Silvia Villegas", categoria: ["GTMKT"], correo: "svillegas@biancorelab.com" },
-    { nombre: "Selene Vazquez", categoria: ["GTMKT"], correo: "svazquez@biancorelab.com" },
-    { nombre: "Magdalena Vargas", categoria: ["GTMKT"], correo: "mvargas@biancorelab.com" },
-    { nombre: "Lourdes Hernandez", categoria: ["GTMKT"], correo: "lhernandez@biancorelab.com" },
-    { nombre: "Alma Gonzalez", categoria: ["GTMKT"], correo: "agonzalez@biancorelab.com" },
-    { nombre: "Angelica Alvarez", categoria: ["GTMKT"], correo: "aalvarez@biancorelab.com" },
-    { nombre: "Lizbeth Mateos", categoria: ["GTMKT"], correo: "lmateos@biancorelab.com" },
-    { nombre: "Patricia Arias", categoria: ["GTMKT"], correo: "parias@biancorelab.com" },
-    { nombre: "Vanesa Canton", categoria: ["GTMKT"], correo: "vcanton@biancorelab.com" },
-    { nombre: "Edgar Salgado", categoria: ["GTMKT"], correo: "esalgado@biancorelab.com" }
-];
-
-document.addEventListener('DOMContentLoaded', function() {
-    const token = getTokenFromUrl();
-    if (token) {
-        sessionStorage.setItem("authToken", token);
-    }
-    const storedToken = sessionStorage.getItem("authToken");
-    if (!storedToken) {
-        redirectToLogin();
-    } else {
-        const tokenToUse = token || storedToken;
-        const userDetails = parseJwt(tokenToUse);
-        if (userDetails && userAuthorized(userDetails.username)) {
-            document.getElementById('username').innerText = userDetails.name || 'Usuario';
-            validateTokenAndProceed(tokenToUse);
-        } else {
-            redirectToLogin();
-        }
-    }
-    setupAreaFilter();
-});
-
-    function userAuthorized(userEmail) {
-    const user = personas.find(persona => persona.correo === userEmail);
-    if (user) {
-        if (user.roles && user.roles.includes("admin")) {
-            sessionStorage.setItem("userCategories", JSON.stringify(["ALL"]));  // 'ALL' o simplemente almacenar el rol y verificar luego
-        } else {
-            sessionStorage.setItem("userCategories", JSON.stringify(user.categoria));
-        }
-        return true;
-    }
-    return false;
-}
-
-    function validateTokenAndProceed(token) {
-        fetch('https://sesiones-back.onrender.com/validate-token', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error("Error parsing JWT: ", e);
+                return null;
             }
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            } else {
+        }
+
+        function redirectToLogin() {
+            window.location.href = 'https://login-teal-three.vercel.app/';
+        }
+
+        const personas = [
+            { nombre: "Edhson Delgado", roles: ["admin"], correo: "edelgado@biancorelab.com" },
+            { nombre: "Mayra Acevedo", categoria: ["GGRAL"], correo: "macevedo@biancorelab.com" },
+            { nombre: "Julio Lopez", categoria: ["GGRAL"], correo: "jlopez@biancorelab.com" },
+            { nombre: "Juana Hernandez", categoria: ["GGRAL"], correo: "jhernandez@biancorelab.com" },
+            { nombre: "Valeria Gonzalez", categoria: ["admin"], correo: "cobranza@biancorelab.com" },
+            { nombre: "Christian Loera", roles: ["admin"], correo: "cloera@biancorelab.com" },
+            { nombre: "Luis Ceballos", roles: ["admin"], correo: "luis@biancorelab.com" },
+            { nombre: "Carlos Ancona", roles: ["admin"], correo: "carlos@biancorelab.com" },
+            { nombre: "Teresita Alejo", categoria: ["GGRAL"], correo: "talejo@biancorelab.com" },
+            { nombre: "Mariana Rivas", categoria: ["GGVTA"], correo: "mrivas@biancorelab.com" },
+            { nombre: "Jesus Macias", categoria: ["GGVTA"], correo: "jmacias@biancorelab.com" },
+            { nombre: "Esperanza Rivera", categoria: ["GGVTA"], correo: "erivera@biancorelab.com" },
+            { nombre: "Felipe Pech", categoria: ["GTMKT"], correo: "fpech@biancorelab.com" },
+            { nombre: "Eduardo Angel", categoria: ["GGVTA"], correo: "eangel@biancorelab.com" },
+            { nombre: "Francisco Macias", roles: ["admin"], correo: "fmacias@biancorelab.com" },
+            { nombre: "Alondra Gonzalez", categoria: ["GID Y GMKT"], correo: "agonzalez@biancorelab.com" },
+            { nombre: "Jashia Perez", categoria: ["GMKT"], correo: "jperez@biancorelab.com" },
+            { nombre: "Fernando Vargas", categoria: ["GVTA"], correo: "fvargas@biancorelab.com" },
+            { nombre: "Eliu Cortes", categoria: ["GTMKT"], correo: "ecortes@biancorelab.com" },
+            { nombre: "Pedro Mora", categoria: ["GTMKT"], correo: "pmora@biancorelab.com" },
+            { nombre: "Diana Castillo", categoria: ["GTMKT"], correo: "dcastillo@biancorelab.com" },
+            { nombre: "Fulgencia Lorenzo", categoria: ["GTMKT"], correo: "florenzo@biancorelab.com" },
+            { nombre: "Jakeline Lozada", categoria: ["GTMKT"], correo: "jlozada@biancorelab.com" },
+            { nombre: "Claudia Abad", categoria: ["GTMKT"], correo: "cabad@biancorelab.com" },
+            { nombre: "Gabriela Flores", categoria: ["GTMKT"], correo: "gflores@biancorelab.com" },
+            { nombre: "Silvia Villegas", categoria: ["GTMKT"], correo: "svillegas@biancorelab.com" },
+            { nombre: "Selene Vazquez", categoria: ["GTMKT"], correo: "svazquez@biancorelab.com" },
+            { nombre: "Magdalena Vargas", categoria: ["GTMKT"], correo: "mvargas@biancorelab.com" },
+            { nombre: "Lourdes Hernandez", categoria: ["GTMKT"], correo: "lhernandez@biancorelab.com" },
+            { nombre: "Alma Gonzalez", categoria: ["GTMKT"], correo: "agonzalez@biancorelab.com" },
+            { nombre: "Angelica Alvarez", categoria: ["GTMKT"], correo: "aalvarez@biancorelab.com" },
+            { nombre: "Lizbeth Mateos", categoria: ["GTMKT"], correo: "lmateos@biancorelab.com" },
+            { nombre: "Patricia Arias", categoria: ["GTMKT"], correo: "parias@biancorelab.com" },
+            { nombre: "Vanesa Canton", categoria: ["GTMKT"], correo: "vcanton@biancorelab.com" },
+            { nombre: "Edgar Salgado", categoria: ["GTMKT"], correo: "esalgado@biancorelab.com" }
+        ];
+
+        const areaOrder = [
+            { key: "GGRAL", label: "Gasto General" },
+            { key: "GDIR", label: "Gasto Directivos" },
+            { key: "GVTA", label: "Gastos de Venta" },
+            { key: "GMKT", label: "Gastos de Marketing" },
+            { key: "GTMKT", label: "Gastos de Trade Marketing" },
+            { key: "GI+D", label: "Gastos de I+D" },
+            { key: "GFI", label: "Gastos Financieros" },
+            { key: "Sueldos y carga impositiva", label: "Sueldos y carga impositiva" },
+        ];
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = getTokenFromUrl();
+            if (token) {
+                sessionStorage.setItem("authToken", token);
+            }
+            const storedToken = sessionStorage.getItem("authToken");
+            if (!storedToken) {
                 redirectToLogin();
-                throw new Error('Failed to validate token');
+            } else {
+                const tokenToUse = token || storedToken;
+                const userDetails = parseJwt(tokenToUse);
+                if (userDetails && userAuthorized(userDetails.username)) {
+                    document.getElementById('username').innerText = userDetails.name || 'Usuario';
+                    validateTokenAndProceed(tokenToUse);
+                } else {
+                    redirectToLogin();
+                }
             }
-        })
-        .then(data => {
-            console.log('Access granted', data.user);
-            fetch('/api/report-data')
-                .then(response => response.json())
-                .then(data => fillTable(data))
-                .catch(error => console.error('Error al obtener los datos:', error));
-        })
-        .catch(error => {
-            console.error(error);
-            redirectToLogin();
+            setupAreaFilter();
         });
-    }
 
-    let totalPresupuestoAll = 0;
-    let totalRealAll = 0;
-    let totalDiferenciaAll = 0;
+        function userAuthorized(userEmail) {
+            const user = personas.find(persona => persona.correo === userEmail);
+            if (user) {
+                if (user.roles && user.roles.includes("admin")) {
+                    sessionStorage.setItem("userCategories", JSON.stringify(["ALL"]));  // 'ALL' o simplemente almacenar el rol y verificar luego
+                } else {
+                    sessionStorage.setItem("userCategories", JSON.stringify(user.categoria));
+                }
+                return true;
+            }
+            return false;
+        }
 
-    function fillTable(data) {
-    // Asegúrate de obtener 'userCategories' desde 'sessionStorage'
+        function validateTokenAndProceed(token) {
+            fetch('https://artistic-verdant-flock.glitch.me/validate-token', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        redirectToLogin();
+                        throw new Error('Failed to validate token');
+                    }
+                })
+                .then(data => {
+                    console.log('Access granted', data.user);
+                    fetch('/api/report-data')
+                        .then(response => response.json())
+                        .then(data => fillTable(data))
+                        .catch(error => console.error('Error al obtener los datos:', error));
+                })
+                .catch(error => {
+                    console.error(error);
+                    redirectToLogin();
+                });
+        }
+
+        let totalPresupuestoAll = 0;
+        let totalRealAll = 0;
+        let totalDiferenciaAll = 0;
+
+        function fillTable(data) {
     const userCategories = JSON.parse(sessionStorage.getItem("userCategories"));
-    // Agregar una verificación para asegurar que userCategories siempre tenga un valor antes de usarlo
     if (!userCategories) {
         console.error("No se pudieron recuperar las categorías de usuario desde sessionStorage.");
-        return;  // Salir de la función si no hay categorías disponibles
+        return;
     }
-    
-    // Si userCategories incluye "ALL", permitir todos los datos, de lo contrario, filtrar por las áreas permitidas
-    const hasAllAccess = userCategories.includes("ALL");
 
+    const hasAllAccess = userCategories.includes("ALL");
     data = data.filter(item => hasAllAccess || userCategories.includes(item.Area));
+
+    // Ordenar los datos según areaOrder
+    data.sort((a, b) => {
+        let indexA = areaOrder.findIndex(area => area.key === a.Area);
+        let indexB = areaOrder.findIndex(area => area.key === b.Area);
+        return indexA - indexB;
+    });
 
     const tableBody = document.querySelector('tbody');
     tableBody.innerHTML = '';
 
-      totalPresupuestoAll = 0;
-      totalRealAll = 0;
-      totalDiferenciaAll = 0;
+    totalPresupuestoAll = 0;
+    totalRealAll = 0;
+    totalDiferenciaAll = 0;
 
-      // Llenar la lista desplegable de áreas
-      const areaFilter = document.querySelector('#areaFilter');
-      areaFilter.innerHTML = '<option value="">Todas las áreas</option>';
-      const areas = new Set(data.map(item => item.Area));
-      areas.forEach(area => {
+    const areaFilter = document.querySelector('#areaFilter');
+    areaFilter.innerHTML = '<option value="">Todas las áreas</option>';
+
+    const areas = new Set(data.map(item => item.Area));
+    const orderedAreas = [...areas].sort((a, b) => {
+        const aIndex = areaOrder.findIndex(area => area.key === a);
+        const bIndex = areaOrder.findIndex(area => area.key === b);
+        return (aIndex > -1 ? aIndex : areaOrder.length) - (bIndex > -1 ? bIndex : areaOrder.length);
+    });
+
+    orderedAreas.forEach(area => {
         const option = document.createElement('option');
         option.value = area;
-        option.text = area;
+        option.text = areaOrder.find(a => a.key === area)?.label || area;
         areaFilter.add(option);
-      });
+    });
 
-      let totalPresupuestoVisible = 0;
-      let totalRealVisible = 0;
-      let totalDiferenciaVisible = 0;
+            let totalPresupuestoVisible = 0;
+            let totalRealVisible = 0;
+            let totalDiferenciaVisible = 0;
 
-      data.forEach(item => {
-        const row = document.createElement('tr');
+            data.forEach(item => {
+                const row = document.createElement('tr');
 
-        const conceptoCell = document.createElement('td');
-        conceptoCell.textContent = item.Concepto;
-        row.appendChild(conceptoCell);
+                const conceptoCell = document.createElement('td');
+                conceptoCell.textContent = item.Concepto;
+                row.appendChild(conceptoCell);
 
-        const areaCell = document.createElement('td');
-        areaCell.textContent = item.Area;
-        row.appendChild(areaCell);
+                const areaCell = document.createElement('td');
+                areaCell.textContent = areaOrder.find(a => a.key === item.Area)?.label || item.Area;
+                row.appendChild(areaCell);
 
-        const presupuestoCell = document.createElement('td');
-        presupuestoCell.textContent = formatNumber(item.Presupuesto);
-        row.appendChild(presupuestoCell);
-        totalPresupuestoAll += item.Presupuesto;
-        totalPresupuestoVisible += item.Presupuesto;
+                const presupuestoCell = document.createElement('td');
+                presupuestoCell.textContent = formatNumber(item.Presupuesto);
+                row.appendChild(presupuestoCell);
+                totalPresupuestoAll += item.Presupuesto;
+                totalPresupuestoVisible += item.Presupuesto;
 
-        const realCell = document.createElement('td');
-        realCell.textContent = formatNumber(item.Real);
-        row.appendChild(realCell);
-        totalRealAll += item.Real;
-        totalRealVisible += item.Real;
+                const realCell = document.createElement('td');
+                realCell.textContent = formatNumber(item.Real);
+                row.appendChild(realCell);
+                totalRealAll += item.Real;
+                totalRealVisible += item.Real;
 
-        const diferencia = item.Real - item.Presupuesto;
-        const diferenciaCell = document.createElement('td');
-        diferenciaCell.textContent = formatNumber(diferencia);
-        if (diferencia < 0) {
-          diferenciaCell.classList.add('negative');
-        } else if (diferencia > 0 && diferencia >= 0.01) {
-          diferenciaCell.classList.add('positive');
+                const diferencia = item.Real - item.Presupuesto;
+                const diferenciaCell = document.createElement('td');
+                diferenciaCell.textContent = formatNumber(diferencia);
+                if (diferencia < 0) {
+                    diferenciaCell.classList.add('negative');
+                } else if (diferencia > 0 && diferencia >= 0.01) {
+                    diferenciaCell.classList.add('positive');
+                }
+                row.appendChild(diferenciaCell);
+                totalDiferenciaAll += diferencia;
+                totalDiferenciaVisible += diferencia;
+
+                const diferenciaPercent = document.createElement('td');
+                let percent;
+                if (isNaN(diferencia) || item.Presupuesto === 0) {
+                    percent = '0.00%';
+                } else {
+                    percent = `${((diferencia / item.Presupuesto) * 100).toFixed(2)}%`;
+                }
+                diferenciaPercent.textContent = percent;
+                if (isNaN(diferencia)) {
+                    diferenciaPercent.classList.add('zero-percent');
+                } else if (diferencia < 0) {
+                    diferenciaPercent.classList.add('negative');
+                } else if (diferencia > 0 && diferencia >= 0.01) {
+                    diferenciaPercent.classList.add('positive');
+                }
+                row.appendChild(diferenciaPercent);
+
+                tableBody.appendChild(row);
+            });
+
+            updateTotal();
         }
-        row.appendChild(diferenciaCell);
-        totalDiferenciaAll += diferencia;
-        totalDiferenciaVisible += diferencia;
 
-        const diferenciaPercent = document.createElement('td');
-        let percent;
-        if (isNaN(diferencia) || item.Presupuesto === 0) {
-          percent = '0.00%';
-        } else {
-          percent = `${((diferencia / item.Presupuesto) * 100).toFixed(2)}%`;
+        function updateTotal() {
+            document.querySelector('#totalPresupuesto').textContent = formatNumber(totalPresupuestoAll.toFixed(2));
+            document.querySelector('#totalReal').textContent = formatNumber(totalRealAll.toFixed(2));
+            document.querySelector('#totalDiferencia').textContent = formatNumber(totalDiferenciaAll.toFixed(2));
+            document.querySelector('#totalDiferenciaPercent').textContent = `${((totalDiferenciaAll / totalPresupuestoAll) * 100).toFixed(2)}%`;
         }
-        diferenciaPercent.textContent = percent;
-        if (isNaN(diferencia)) {
-          diferenciaPercent.classList.add('zero-percent');
-        } else if (diferencia < 0) {
-          diferenciaPercent.classList.add('negative');
-        } else if (diferencia > 0 && diferencia >= 0.01) {
-          diferenciaPercent.classList.add('positive');
-        }
-        row.appendChild(diferenciaPercent);
 
-        tableBody.appendChild(row);
-      });
-
-      updateTotal();
-    }
-
-    // Función para actualizar el total
-    function updateTotal() {
-      document.querySelector('#totalPresupuesto').textContent = formatNumber(totalPresupuestoAll.toFixed(2));
-      document.querySelector('#totalReal').textContent = formatNumber(totalRealAll.toFixed(2));
-      document.querySelector('#totalDiferencia').textContent = formatNumber(totalDiferenciaAll.toFixed(2));
-      document.querySelector('#totalDiferenciaPercent').textContent = `${((totalDiferenciaAll / totalPresupuestoAll) * 100).toFixed(2)}%`;
-    }
-    function setupAreaFilter() {
+function setupAreaFilter() {
     const userCategories = JSON.parse(sessionStorage.getItem("userCategories")) || [];
     const areaFilter = document.querySelector('#areaFilter');
-    areaFilter.innerHTML = '<option value="">Todas las áreas</option>'; // Asegura que la lista empieza limpia.
-    userCategories.forEach(area => {
-        const option = document.createElement('option');
-        option.value = area;
-        option.text = area;
-        areaFilter.appendChild(option); // Añade cada área a la lista desplegable.
+    areaFilter.innerHTML = '<option value="">Todas las áreas</option>';
+
+    areaOrder.forEach(area => {
+        if (userCategories.includes("ALL") || userCategories.includes(area.key)) {
+            const option = document.createElement('option');
+            option.value = area.key;
+            option.text = area.label;
+            areaFilter.appendChild(option);
+        }
     });
 }
 
-    // Función para filtrar la tabla
-    function filterTable() {
-    const searchInput = document.querySelector('#searchInput').value.toLowerCase();
-    const areaFilter = document.querySelector('#areaFilter').value;
-    const userCategories = JSON.parse(sessionStorage.getItem("userCategories")) || [];
 
+function filterTable() {
+    const searchInput = document.querySelector('#searchInput').value.toLowerCase();
+    const areaFilterValue = document.querySelector('#areaFilter').value;
+    const tableRows = document.querySelectorAll('tbody tr');
+
+    tableRows.forEach(row => {
+        const concepto = row.cells[0].textContent.toLowerCase();
+        const areaLabel = row.cells[1].textContent.trim();
+        const areaKey = areaOrder.find(a => a.label === areaLabel)?.key;
+
+        if (!areaKey) {
+            console.error('No se encontró key para el label:', areaLabel); // Añade esta línea para depurar
+        }
+
+        const matchesSearch = concepto.includes(searchInput);
+        const matchesArea = areaFilterValue === '' || areaKey === areaFilterValue;
+
+        if (matchesSearch && matchesArea) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+
+    // Actualizar los totales según lo visible
+    updateVisibleTotals();
+}
+function updateVisibleTotals() {
     const tableRows = document.querySelectorAll('tbody tr');
     let totalPresupuestoVisible = 0;
     let totalRealVisible = 0;
     let totalDiferenciaVisible = 0;
 
     tableRows.forEach(row => {
-        const concepto = row.cells[0].textContent.toLowerCase();
-        const area = row.cells[1].textContent;
-
-        // Ajustar la lógica de filtrado para considerar múltiples áreas del usuario
-        const showRow = concepto.includes(searchInput) && 
-                        (areaFilter === '' || area === areaFilter || userCategories.includes(area));
-        row.style.display = showRow ? '' : 'none';
-
-        if (showRow) {
-            totalPresupuestoVisible += parseFloat(row.cells[2].textContent.replace(/,/g, ''));
-            totalRealVisible += parseFloat(row.cells[3].textContent.replace(/,/g, ''));
-            totalDiferenciaVisible += parseFloat(row.cells[4].textContent.replace(/,/g, ''));
+        if (row.style.display !== 'none') {
+            const presupuesto = parseFloat(row.cells[2].textContent.replace(/,/g, ''));
+            const real = parseFloat(row.cells[3].textContent.replace(/,/g, ''));
+            const diferencia = parseFloat(row.cells[4].textContent.replace(/,/g, ''));
+            totalPresupuestoVisible += presupuesto;
+            totalRealVisible += real;
+            totalDiferenciaVisible += diferencia;
         }
     });
 
-    document.querySelector('#totalPresupuesto').textContent = formatNumber(totalPresupuestoVisible.toFixed(2));
-    document.querySelector('#totalReal').textContent = formatNumber(totalRealVisible.toFixed(2));
-    document.querySelector('#totalDiferencia').textContent = formatNumber(totalDiferenciaVisible.toFixed(2));
-    document.querySelector('#totalDiferenciaPercent').textContent = `${((totalDiferenciaVisible / totalPresupuestoVisible) * 100).toFixed(2)}%`;
-
-    if (searchInput === '' && areaFilter === '') {
-        updateTotal();
-    }
+    // Actualizar los totales en el pie de página con los nuevos valores
+    document.querySelector('#totalPresupuesto').textContent = formatNumber(totalPresupuestoVisible);
+    document.querySelector('#totalReal').textContent = formatNumber(totalRealVisible);
+    document.querySelector('#totalDiferencia').textContent = formatNumber(totalDiferenciaVisible);
+    let percent = totalPresupuestoVisible > 0 ? (totalDiferenciaVisible / totalPresupuestoVisible) * 100 : 0;
+    document.querySelector('#totalDiferenciaPercent').textContent = `${percent.toFixed(2)}%`;
 }
 
+        function formatNumber(number) {
+            return parseFloat(number).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        }
 
-    // Función para formatear números con comas y puntos
-    function formatNumber(number) {
-      return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    }
-
-
-  </script>
+    </script>
 </body>
+
 </html>

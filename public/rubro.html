@@ -1,42 +1,46 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Solicitud de Cambio de Rubro</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="./css/rubros.css">
+  <link rel="stylesheet" href="./css/rubros.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css">
+
 </head>
 
 <body>
     <div class="header">
-        <img src="/img/LOGO BCL H.png" alt="Logo">
-        <h1>Solicitud de Cambio de Rubro</h1>
+        <img src="/img/BCL MGM.png" alt="Logo">
+        <h1>Reasignacion de rubro</h1>
         <button class="button" onclick="location.href='Reporte.html'">Ir a los Rubros</button>
     </div>
     <form id="formRubros">
-        <div class="form-group">
-            <label for="rubroOrigen">Rubro Origen:</label>
-            <select id="rubroOrigen" class="select2" data-live-search="true">
-                <option value="">Seleccionar Rubro</option>
-            </select>
-        </div>
+        <div class="detinos">
+            <div class="form-group">
+                <label for="rubroOrigen">Rubro Origen:</label>
+                <select id="rubroOrigen" class="select2" data-live-search="true">
+                    <option value="">Seleccionar Rubro</option>
+                </select>
+            </div>
 
-        <div class="form-group">
-            <label for="rubroDestino">Rubro Destino:</label>
-            <select id="rubroDestino" class="select2" data-live-search="true">
-                <option value="">Seleccionar Rubro</option>
-            </select>
+            <div class="form-group">
+                <label for="rubroDestino">Rubro Destino:</label>
+                <select id="rubroDestino" class="select2" data-live-search="true">
+                    <option value="">Seleccionar Rubro</option>
+                </select>
+            </div>
         </div>
 
         <div class="saldo-info">
-            <p>Saldo actual Rubro Origen: <span id="saldoOrigen">0</span></p>
-            <p>Saldo actual Rubro Destino: <span id="saldoDestino">0</span></p>
+            <p>Saldo actual Rubro Origen: <br><span id="saldoOrigen">0</span></p>
+            <p>Saldo actual Rubro Destino:<br> <span id="saldoDestino">0</span></p>
         </div>
 
         <div class="form-group">
             <label for="cantidadTransferir">Cantidad a Transferir:</label>
-            <input type="number" id="cantidadTransferir" value="0" min="0" step="0.01">
+            <input type="number" id="cantidadTransferir" placeholder="0" min="0" step="0.01">
         </div>
 
         <div class="saldo-info">
@@ -45,82 +49,87 @@
         </div>
 
         <div class="form-group">
-            <input class="field-input" id="applicant" name="applicant" required>
+            <input hidden class="field-input" id="applicant" name="applicant" required>
         </div>
 
-        <button type="submit">Enviar Solicitud</button>
+        <div class="botones">
+            <div class="btn-enviar">
+                <button type="submit">Enviar Solicitud</button>
+            </div>
+        </div>
     </form>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="/js/autorizadores.js"></script>
     <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const urlToken = getTokenFromUrl();
-    const storedToken = sessionStorage.getItem("authToken");
+        document.addEventListener('DOMContentLoaded', function () {
+            const urlToken = getTokenFromUrl();
+            const storedToken = sessionStorage.getItem("authToken");
 
-    if (urlToken) {
-        sessionStorage.setItem("authToken", urlToken);
-        validateTokenAndProceed(urlToken);
-    } else if (storedToken) {
-        validateTokenAndProceed(storedToken);
-    } else {
-        redirectToLogin();
-    }
-});
+            if (urlToken) {
+                sessionStorage.setItem("authToken", urlToken);
+                validateTokenAndProceed(urlToken);
+            } else if (storedToken) {
+                validateTokenAndProceed(storedToken);
+            } else {
+                redirectToLogin();
+            }
+        });
 
-function getTokenFromUrl() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('token');
-}
-
-function parseJwt(token) {
-    try {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        return JSON.parse(jsonPayload);
-    } catch (e) {
-        console.error("Error parsing JWT: ", e);
-        return null;
-    }
-}
-
-function redirectToLogin() {
-    window.location.href = 'https://login-teal-three.vercel.app/';
-}
-
-function validateTokenAndProceed(token) {
-    fetch('https://sesiones-back.onrender.com/validate-token', {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`
+        function getTokenFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('token');
         }
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            redirectToLogin();
-            throw new Error('Failed to validate token');
+
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error("Error parsing JWT: ", e);
+                return null;
+            }
         }
-    })
-    .then(data => {
-        const userDetails = parseJwt(token);
-        if (userDetails && userDetails.username) {
-            sessionStorage.setItem("userEmail", userDetails.username);
-            sessionStorage.setItem("userName", userDetails.name);
-            document.getElementById('applicant').value = userDetails.username;
-            console.log('Access granted', data.user);
-        } else {
-            redirectToLogin();
+
+        function redirectToLogin() {
+            window.location.href = 'https://login-teal-three.vercel.app/';
         }
-    })
-    .catch(error => {
-        console.error(error);
-        redirectToLogin();
-    });
-}
+
+        function validateTokenAndProceed(token) {
+            fetch('https://artistic-verdant-flock.glitch.me/validate-token', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        redirectToLogin();
+                        throw new Error('Failed to validate token');
+                    }
+                })
+                .then(data => {
+                    const userDetails = parseJwt(token);
+                    if (userDetails && userDetails.username) {
+                        sessionStorage.setItem("userEmail", userDetails.username);
+                        sessionStorage.setItem("userName", userDetails.name);
+                        document.getElementById('applicant').value = userDetails.username;
+                        console.log('Access granted', data.user);
+                    } else {
+                        redirectToLogin();
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    redirectToLogin();
+                });
+        }
 
 
         $(document).ready(function () {
@@ -154,12 +163,14 @@ function validateTokenAndProceed(token) {
             }
 
             $.get('/api/rubros', function (rubros) {
-                rubros.sort((a, b) => a.Concepto.localeCompare(b.Concepto));
-                rubros.forEach(function (rubro) {
-                    $('#rubroOrigen, #rubroDestino').append(new Option(rubro.Concepto, rubro._id));
-                });
-                actualizaSaldos();
-            });
+    const userEmail = sessionStorage.getItem("userEmail");  // Asegúrate de que este es el correo electrónico correcto.
+    rubros = rubros.filter(rubro => rubrosToAreaAndAutorizador[rubro.Concepto]?.autorizador === userEmail);
+    rubros.sort((a, b) => a.Concepto.localeCompare(b.Concepto));
+    rubros.forEach(function (rubro) {
+        $('#rubroOrigen, #rubroDestino').append(new Option(rubro.Concepto, rubro._id));
+    });
+    actualizaSaldos();
+});
 
             $('#rubroOrigen').change(function () {
                 const origenId = $(this).val();
