@@ -6,9 +6,10 @@ body {
     color: #212529;
   }
   .mb-4 {
-    margin-bottom: 1.5rem !important;
     display: flex;
-    width: 307px;
+    justify-content: space-between; /* Asegura que los elementos se distribuyan ocupando todo el espacio disponible */
+    align-items: center; /* Alinea verticalmente los elementos */
+    width: 100%; /* Utiliza todo el ancho disponible */
 }
   h1 {
     color: #343a40;
@@ -29,6 +30,10 @@ body {
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
   }
+  .left-group {
+    display: flex; /* Mantiene los elementos alineados horizontalmente */
+    align-items: center; /* Alineación vertical en el centro */
+}
 
   .table {
     background-color: #fff;
@@ -129,3 +134,19 @@ body {
     width: 1.3em;
     fill: #b4b4b4;
   }
+  .btn-secondary {
+    background-color: #4CAF50;
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    margin-left: 10px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background-color: #4CAF50;
+}
+.form-control, .btn-secondary {
+  margin-right: 10px; /* Asegura un poco de espacio entre los elementos */
+}
