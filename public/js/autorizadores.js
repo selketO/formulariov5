@@ -910,6 +910,11 @@ const rubrosToAreaAndAutorizador = {
       area: "Finanzas",
       autorizador: "luis@biancorelab.com",
       solicitantes: ["cloera@biancorelab.com"],
+    },    
+    "Prueba": {
+      area: "BI",
+      autorizador: "edelgado@biancorelab.com",
+      solicitantes: ["edelgado@biancorelab.com"],
     },
   };
   
