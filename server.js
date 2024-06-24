@@ -263,7 +263,7 @@ app.post('/enviar-formulario', async (req, res) => {
             try {
                 // Enviar el primer correo
                 await transporter.sendMail({
-                    from: '"BCL Management" <' + process.env.EMAIL_FROM + '>',
+                    from: process.env.EMAIL_FROM ,
                     to: correoAplicant,
                     subject: 'Detalles de tu solicitud de formulario',
                     html: htmlEmailContentCancel
@@ -271,7 +271,7 @@ app.post('/enviar-formulario', async (req, res) => {
 
                 // Enviar el segundo correo
                 await transporter.sendMail({
-                    from: '"BCL Management" <' + process.env.EMAIL_FROM + '>',
+                    from: process.env.EMAIL_FROM,
                     to: formData.correo,
                     subject: 'Autorización de Solped Requerida',
                     html: htmlEmailContent,
